@@ -46,6 +46,22 @@ Blend: z(log(1 + lexical)) + 0.25 z(neural), same weight for every model. Lexica
 - Neural alone is far below lexical, so all these models act as small corrections. Differences of a few hits between runs are within noise.
 - Each run's own zip used the old raw z-score blend, which set the neural weight to 0 for five of the seven. Use `fuse_submissions.py` instead.
 
+## Learned ranker on content features (`ltr_probe.py`)
+
+Gradient boosting fit on the train split over word-overlap scores at 3, 4, 5, 6 and 8-grams (log and per-query z-score), rank, lengths, date gap and a pool-level feature: a candidate's mean overlap with all queries in its split. No labels are used for that feature. Dev scores are averaged over 5 seeds.
+
+| Ranking | Dev F1 |
+|---|---|
+| Lexical order | 0.4603 |
+| Learned ranker, no pool-level feature | 0.4680 |
+| Learned ranker | 0.4858 |
+| + 0.2 x encoder full | 0.4925 |
+| + 0.2 x GQA full | 0.4892 |
+| + 0.2 x LoRMA | 0.4892 |
+| + 0.2 x KD student | 0.4914 |
+
+The pool-level feature gives most of the gain: it marks landmark cases that many queries resemble. It depends on the split's own queries, and it transferred from train (4320 candidates) to dev (1023). The ranker itself is not a Phase 1 model; the neural term is. Weight 0.2 was read off the dev grid.
+
 ## Notes
 
 - Gold candidates are always older than the query when both have a `DATE OF JUDGMENT` header (352 of 352 pairs), so dropping later candidates is safe. The header parses for about half of the documents.
