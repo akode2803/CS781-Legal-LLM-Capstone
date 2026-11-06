@@ -14,6 +14,12 @@ Metric: Micro-F1@7. A perfect @7 ranking on dev scores 0.618, because gold sets 
 
 Recall of that ranking on dev: top 7 0.425, top 20 0.623, top 50 0.742, top 100 0.791.
 
+## Test scores (Codabench)
+
+| Submission | Test F1 | Precision | Recall | Dev F1 |
+|---|---|---|---|---|
+| `p7-shingle4-b06-hdrdate.zip` (1038437, on leaderboard) | 0.4554 | 0.4647 | 0.4464 | 0.4603 |
+
 ## Notes
 
 - Gold candidates are always older than the query when both have a `DATE OF JUDGMENT` header (352 of 352 pairs), so dropping later candidates is safe. The header parses for about half of the documents.
