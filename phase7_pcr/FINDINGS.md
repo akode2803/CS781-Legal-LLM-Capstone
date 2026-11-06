@@ -27,6 +27,25 @@ Recall of that ranking on dev: top 7 0.425, top 20 0.623, top 50 0.742, top 100 
 - Raw lexical scores are heavy-tailed, so z-scoring them is a poor blend. z(log(1 + lexical)) + 0.25 z(neural) gives 0.4703; reciprocal-rank blend at 0.25 gives 0.4669. The weight was chosen on dev, so these are slightly optimistic.
 - Replacing the order of the lexical top 10 / 15 / 20 with neural order hurts (0.4514 / 0.4102 / 0.3913): the neural score works as a small correction, not a replacement.
 
+## Seven reranker runs (A100, 512 + 512 token excerpts, 2 epochs, about 8 CU in all)
+
+Blend: z(log(1 + lexical)) + 0.25 z(neural), same weight for every model. Lexical alone: 0.4603.
+
+| Run | Trainable | Minutes | ms per pair | Peak GB | Neural alone | Dev F1 blended |
+|---|---|---|---|---|---|---|
+| Encoder, full | 100% | 11.7 | 4.5 | 12.0 | 0.3391 | **0.4725** |
+| GQA, full (KD teacher) | 100% | 9.8 | 4.2 | 12.0 | 0.3168 | 0.4703 |
+| GQA, LoRMA | 0.31% | 8.5 | 4.5 | 6.2 | 0.3335 | 0.4658 |
+| GQA, KD student (8 blocks) | 100% | 7.9 | 2.1 | 7.4 | 0.2079 | 0.4658 |
+| GQA, IA3 | 0.03% | 8.9 | 4.7 | 6.8 | 0.3002 | 0.4647 |
+| GQA, partial (top 4 blocks) | 21.08% | 5.2 | 4.2 | 3.7 | 0.3168 | 0.4625 |
+| GQA, LoRA | 0.40% | 8.8 | 4.7 | 6.4 | 0.3135 | 0.4603 |
+
+- Averaging all seven did not help (best 0.4691 across weights, 0.4669 at 0.25). GQA + encoder full: 0.4714 at 0.25.
+- With the weight chosen on one half of dev and scored on the other (20 random splits), gain over lexical: encoder +0.0096, GQA full +0.0081, all seven +0.0053.
+- Neural alone is far below lexical, so all these models act as small corrections. Differences of a few hits between runs are within noise.
+- Each run's own zip used the old raw z-score blend, which set the neural weight to 0 for five of the seven. Use `fuse_submissions.py` instead.
+
 ## Notes
 
 - Gold candidates are always older than the query when both have a `DATE OF JUDGMENT` header (352 of 352 pairs), so dropping later candidates is safe. The header parses for about half of the documents.
