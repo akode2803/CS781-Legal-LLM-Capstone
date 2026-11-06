@@ -1,0 +1,121 @@
+{
+ "corpus_tokens": 4644464782,
+ "n": 16,
+ "sample": "1/32",
+ "splits": {
+  "tokens_lsi_v1_max40000:dev": {
+   "docs_checked": 9177,
+   "mean_fraction_found": 0.040868512423934605,
+   "docs_over_0.1": 1141,
+   "docs_over_0.5": 77,
+   "docs_over_0.9": 0,
+   "worst_fractions": [
+    0.8,
+    0.727,
+    0.714,
+    0.714,
+    0.69,
+    0.69,
+    0.686,
+    0.679,
+    0.672,
+    0.667
+   ]
+  },
+  "tokens_lsi_v1_max40000:test": {
+   "docs_checked": 11842,
+   "mean_fraction_found": 0.04176041481813916,
+   "docs_over_0.1": 1510,
+   "docs_over_0.5": 106,
+   "docs_over_0.9": 1,
+   "worst_fractions": [
+    1.0,
+    0.8,
+    0.733,
+    0.706,
+    0.705,
+    0.7,
+    0.696,
+    0.692,
+    0.688,
+    0.68
+   ]
+  },
+  "tokens_lsi_v1_max40000:train": {
+   "docs_checked": 38345,
+   "mean_fraction_found": 0.04386134723482033,
+   "docs_over_0.1": 5112,
+   "docs_over_0.5": 354,
+   "docs_over_0.9": 5,
+   "worst_fractions": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    0.917,
+    0.889,
+    0.875,
+    0.875,
+    0.875,
+    0.833
+   ]
+  },
+  "tokens_v1_max40000:dev": {
+   "docs_checked": 994,
+   "mean_fraction_found": 0.0021656856825123865,
+   "docs_over_0.1": 5,
+   "docs_over_0.5": 0,
+   "docs_over_0.9": 0,
+   "worst_fractions": [
+    0.143,
+    0.12,
+    0.111,
+    0.108,
+    0.102,
+    0.094,
+    0.079,
+    0.074,
+    0.069,
+    0.067
+   ]
+  },
+  "tokens_v1_max40000:test": {
+   "docs_checked": 1516,
+   "mean_fraction_found": 0.008058372556286901,
+   "docs_over_0.1": 29,
+   "docs_over_0.5": 3,
+   "docs_over_0.9": 0,
+   "worst_fractions": [
+    0.69,
+    0.561,
+    0.545,
+    0.5,
+    0.48,
+    0.471,
+    0.462,
+    0.45,
+    0.447,
+    0.431
+   ]
+  },
+  "tokens_v1_max40000:train": {
+   "docs_checked": 30854,
+   "mean_fraction_found": 0.4027405412692779,
+   "docs_over_0.1": 29637,
+   "docs_over_0.5": 6802,
+   "docs_over_0.9": 59,
+   "worst_fractions": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ]
+  }
+ }
+}

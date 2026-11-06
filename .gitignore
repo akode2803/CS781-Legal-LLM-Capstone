@@ -1,0 +1,14 @@
+# secrets and data never go in the repo
+*.env
+.env*
+data/
+Phase_*/
+*.pt
+*.npy
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+*.npz
+
+# regenerable caches
+*/cache/
