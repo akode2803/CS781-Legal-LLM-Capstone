@@ -1,4 +1,4 @@
-"""Separate, disclosed experiment: citation traces left behind by the organisers' masking. Not part of the main (content-only) entry.
+"""Leak analysis only, never used for a submission: citation traces left behind by the organisers' masking.
 
 Two match types: `forward` = a citation in the candidate's header also appears as a reporter reference in the query text; `citator` = the candidate's CITATOR INFO names the query's own AIR citation.
 Matched candidates are moved to the front of an existing ranking, keeping their relative order.

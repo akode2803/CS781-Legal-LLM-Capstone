@@ -26,7 +26,9 @@ Recall of that ranking on dev: top 7 0.425, top 20 0.623, top 50 0.742, top 100 
 - Highest year in the text is not a usable date: 20-33% of gold candidates violate it.
 - Mixing n-gram sizes by z-score did not beat the best single size.
 
-## Citation traces (separate, disclosed experiment)
+## Citation traces (measured on dev and train, rejected, never submitted)
+
+We decided not to use these: matching leftover citations reads the answer from masking gaps and does not improve any model. The numbers below only document the leak.
 
 The organisers masked citations, but traces survive: header `CITATION:` and `CITATOR INFO` blocks, and reporter references in footnotes. See [citation_residue.py](citation_residue.py).
 
