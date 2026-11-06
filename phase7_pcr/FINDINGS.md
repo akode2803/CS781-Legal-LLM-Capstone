@@ -20,6 +20,13 @@ Recall of that ranking on dev: top 7 0.425, top 20 0.623, top 50 0.742, top 100 
 |---|---|---|---|---|
 | `p7-shingle4-b06-hdrdate.zip` (1038437, on leaderboard) | 0.4554 | 0.4647 | 0.4464 | 0.4603 |
 
+## Reranker analysis (p7-gqa-full, dev)
+
+- Neural alone 0.3168, z-score blend with raw lexical 0.4614 (one extra hit, noise).
+- Neural and lexical disagree: rank correlation 0.09 inside the top 50. Gold in top 7: lexical only 190, neural only 61, both 224.
+- Raw lexical scores are heavy-tailed, so z-scoring them is a poor blend. z(log(1 + lexical)) + 0.25 z(neural) gives 0.4703; reciprocal-rank blend at 0.25 gives 0.4669. The weight was chosen on dev, so these are slightly optimistic.
+- Replacing the order of the lexical top 10 / 15 / 20 with neural order hurts (0.4514 / 0.4102 / 0.3913): the neural score works as a small correction, not a replacement.
+
 ## Notes
 
 - Gold candidates are always older than the query when both have a `DATE OF JUDGMENT` header (352 of 352 pairs), so dropping later candidates is safe. The header parses for about half of the documents.
