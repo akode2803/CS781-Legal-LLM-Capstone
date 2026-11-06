@@ -62,3 +62,47 @@ def write_submission(pred, q_ids, pool, path):
     with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('prediction.json', json.dumps({q: pred[q] for q in q_ids}, indent=1))
     return path
+
+
+# ------------------------------------------------------------------------------ fast word n-gram overlap (hashed shingles)
+TOKEN = re.compile(r"[a-z][a-z]+|\d+")
+
+
+def tokens(text):
+    """Lower-cased words and numbers; the <NAME> / <ORG> / <CITATION> masks are dropped."""
+    return TOKEN.findall(re.sub(r'<[A-Z]+>', ' ', text).lower())
+
+
+def shingles(toks, n):
+    """Distinct 64-bit hashes of the word n-grams of one document."""
+    ids = np.array([hash(t) for t in toks], dtype=np.int64)
+    if len(ids) < n: return np.zeros(0, np.int64)
+    h = np.zeros(len(ids) - n + 1, np.int64)
+    with np.errstate(over='ignore'):
+        for i in range(n): h = h * np.int64(1000003) + ids[i:len(ids) - n + 1 + i]
+    return np.unique(h)
+
+
+class Shingles:
+    """Pool index: score(query, doc) = sum of idf over n-grams they share, optionally divided by doc_len ** b."""
+
+    def __init__(self, docs_tok, n, max_df=0.05):
+        sh = [shingles(t, n) for t in docs_tok]; self.n = n; self.N = len(sh)
+        allh = np.concatenate(sh); self.vocab, df = np.unique(allh, return_counts=True)
+        keep = (df >= 1) & (df <= max(2, max_df * self.N)); self.vocab, df = self.vocab[keep], df[keep]
+        self.idf = np.log(1 + self.N / df).astype(np.float32)
+        rows, cols = [], []
+        for i, s in enumerate(sh):
+            j = np.searchsorted(self.vocab, s); j[j == len(self.vocab)] = 0; m = self.vocab[j] == s
+            rows.append(np.full(m.sum(), i)); cols.append(j[m])
+        self.X = sparse.csr_matrix((np.ones(sum(map(len, rows)), np.float32), (np.concatenate(rows), np.concatenate(cols))), shape=(self.N, len(self.vocab)))
+        self.size = np.asarray(self.X.sum(1)).ravel()
+
+    def scores(self, queries_tok, b=0.0):
+        rows, cols = [], []
+        for i, t in enumerate(queries_tok):
+            s = shingles(t, self.n); j = np.searchsorted(self.vocab, s); j[j == len(self.vocab)] = 0; m = self.vocab[j] == s
+            rows.append(np.full(m.sum(), i)); cols.append(j[m])
+        Q = sparse.csr_matrix((np.ones(sum(map(len, rows)), np.float32), (np.concatenate(rows), np.concatenate(cols))), shape=(len(queries_tok), len(self.vocab)))
+        S = np.asarray((Q.multiply(self.idf) @ self.X.T).todense())
+        return S / np.maximum(self.size, 1)[None] ** b
