@@ -17,6 +17,6 @@ def zq(p):
     s=np.log(p.clip(1e-6,1-1e-6)/(1-p.clip(1e-6,1-1e-6)))
     for k in qi: s[Gd==k]=z(s[Gd==k])
     return s
-for name,c in (('citing context',slice(0,27)),('all columns',slice(0,Xt.shape[1]))):
+for name,c in (('citing context',slice(0,27)),):
     s=zq(fit(Xt[:,c],Yt,[Xd[:,c]])[0]); print(name,'alone',ev(s),flush=True)
     for r in sys.argv[2:]: print(' ',r,*[(w,ev(s+w*neural(r))) for w in (.1,.2,.3)],flush=True)

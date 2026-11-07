@@ -160,3 +160,11 @@ One-citation-at-a-time ranker features (`ltr_site.py`: best site, top two, share
 | **1040042 (leaderboard)** | mean z of p7-enc-full, p7c-enc, p7c-lorma, w .2 | .4992 | **.4938** |
 
 Blend settings were picked among about 15 dev combinations, and the entries differ by a few hits, so 1040042's lead over 1039874 (.4926, 2 hits) is within noise. Averaging three differently trained rerankers is at least consistent with the earlier finding that single reranker scores are noisy.
+
+## Encoder seeds (Nov 7, 18:30 IST)
+
+Four more seeds of the two-epoch citing-context encoder (`notebooks/phase7_seeds.ipynb`), neural-only dev at the kept epoch: .3446, .3457, .3513, .3680, about 12 minutes each. Best epoch moves between 1 and 2, so a single seed's dev score is noisy.
+
+Averaging did not move the citing-context ranker blend: four seeds .4981 (w .2), all eight rerankers .4981 (w .1), against .4992 for the three-model entry. Entry 1040271 (all eight, w .1) scored test .4932, below 1040042 at .4938, a difference of one hit. It was submitted despite no dev gain because it was the most principled average, and it did not replace 1040042.
+
+Conclusion: test has plateaued at about .493. The reranker adds about .004 on top of the citing-context ranker (.4891 alone). Further gains would need better candidate recall or more training queries, not more of the same models.

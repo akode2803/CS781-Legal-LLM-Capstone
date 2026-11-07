@@ -181,3 +181,13 @@ nb = new_notebook(cells=[md('# Phase 7 · LoRMA reranker reading citing context\
                          code(c_settings3b), code(c_setup), code(c_data3), code(c_run), code(c_end)])
 nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
 nbformat.write(nb, 'notebooks/phase7_cite_lorma.ipynb'); print('wrote notebooks/phase7_cite_lorma.ipynb')
+
+
+# ---- more encoder seeds to average: same setup as p7c-enc-2ep, since longer training overfit
+c_settings4 = c_settings.split('RUNS = [')[0] + """RUNS = [(f'p7c-enc-s{s}', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, seed=s, select_neural=True)) for s in (101, 102, 103, 104)]"""
+c_run4 = c_run.replace('torch.manual_seed(SEED); model = make(run)', "torch.manual_seed(o['seed']); model = make(run)")
+assert c_run4 != c_run
+nb = new_notebook(cells=[md('# Phase 7 · encoder reranker seeds\nFour seeds of the two-epoch citing-context encoder, to average. The last cell disconnects the runtime.'),
+                         code(c_settings4), code(c_setup), code(c_data3), code(c_run4), code(c_end)])
+nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
+nbformat.write(nb, 'notebooks/phase7_seeds.ipynb'); print('wrote notebooks/phase7_seeds.ipynb')
