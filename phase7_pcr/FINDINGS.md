@@ -168,3 +168,7 @@ Four more seeds of the two-epoch citing-context encoder (`notebooks/phase7_seeds
 Averaging did not move the citing-context ranker blend: four seeds .4981 (w .2), all eight rerankers .4981 (w .1), against .4992 for the three-model entry. Entry 1040271 (all eight, w .1) scored test .4932, below 1040042 at .4938, a difference of one hit. It was submitted despite no dev gain because it was the most principled average, and it did not replace 1040042.
 
 Conclusion: test has plateaued at about .493. The reranker adds about .004 on top of the citing-context ranker (.4891 alone). Further gains would need better candidate recall or more training queries, not more of the same models.
+
+## Report evidence (Nov 7)
+
+`report_analysis.py` rebuilds the final blend on dev (.4992, 449 hits) and writes `report/analysis.json`; `report/EVIDENCE.md` holds the facts in template order, and `report_figures.py` makes the figures. Facts only: analysis prose waits on the template's LLM rule.
