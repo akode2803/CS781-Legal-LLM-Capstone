@@ -170,3 +170,14 @@ nb = new_notebook(cells=[md('# Phase 7 · reranker reading citing context\nRun a
                          code(c_settings3), code(c_setup), code(c_data3), code(c_run), code(c_end)])
 nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
 nbformat.write(nb, 'notebooks/phase7_cite.ipynb'); print('wrote notebooks/phase7_cite.ipynb')
+
+
+# ---- the LoRMA run alone, for a second runtime beside phase7_cite.ipynb. That notebook skips it once its results.json exists.
+c_settings3b = c_settings3.replace("""    ('p7c-enc-2ep', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, select_neural=True)),
+    ('p7c-enc', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, epochs=4, pos_per_q=6, max_minutes=70, select_neural=True)),
+""", '')
+assert 'p7c-enc' not in c_settings3b
+nb = new_notebook(cells=[md('# Phase 7 · LoRMA reranker reading citing context\nSecond runtime beside `phase7_cite.ipynb`. The last cell disconnects this runtime.'),
+                         code(c_settings3b), code(c_setup), code(c_data3), code(c_run), code(c_end)])
+nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
+nbformat.write(nb, 'notebooks/phase7_cite_lorma.ipynb'); print('wrote notebooks/phase7_cite_lorma.ipynb')

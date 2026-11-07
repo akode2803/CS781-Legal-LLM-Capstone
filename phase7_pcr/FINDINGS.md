@@ -138,3 +138,25 @@ Eight columns added to the ranker (`ltr_ctx.py`: n = 3, 4; window 1, 2; log and 
 | 1039874 | + encoder, w .2 (leaderboard) | .4969 | **.4926** |
 
 Test gain over the old ranker alone: +.0101, about 17 hits. Window and blend sizes were picked on dev.
+
+## Citing-context rerankers and longer training (Nov 7, 16:30 IST)
+
+The query excerpt was filled from citing sentences first (`pair_ids(cite=True)`), and epochs were selected on neural-only dev F1 (`select_neural`). Excerpt tests on dev, neural alone:
+
+| Run | Epochs, gold per query | Train top-1, last epoch | Neural alone by epoch | Minutes | Peak GB |
+|---|---|---|---|---|---|
+| p7-enc-full (old excerpt) | 2, 3 | .553 | .2879, .3391 | 11.6 | 12.0 |
+| p7c-enc-2ep | 2, 3 | .578 | .3224, .3469 | 11.6 | 11.8 |
+| p7c-enc | 4, 6 | .949 | .3235, .3180, .3268, .3157 | 35.4 | 11.8 |
+| p7c-lorma (0.31% trainable) | 4, 6 | .685 | .3391, .3435, .3380, .3324 | 25.7 | 6.2 |
+
+Citing-context excerpts add little (.3391 to .3469). Longer training overfits: train top-1 reaches .95 while dev stays at about .32. With 827 training queries, the reranker has plateaued near .33 to .35, so more epochs are not the route to a stronger one. LoRMA matches the full encoder here with 0.31% of the weights and half the memory.
+
+One-citation-at-a-time ranker features (`ltr_site.py`: best site, top two, share of sites matched) did not help: dev .4936 alone against .4947, so they were not submitted.
+
+| ID | Citing-context ranker + | Dev | Test |
+|---|---|---|---|
+| 1040041 | p7c-enc, w .1 | .4981 | .4908 |
+| **1040042 (leaderboard)** | mean z of p7-enc-full, p7c-enc, p7c-lorma, w .2 | .4992 | **.4938** |
+
+Blend settings were picked among about 15 dev combinations, and the entries differ by a few hits, so 1040042's lead over 1039874 (.4926, 2 hits) is within noise. Averaging three differently trained rerankers is at least consistent with the earlier finding that single reranker scores are noisy.
