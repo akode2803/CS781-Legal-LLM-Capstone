@@ -103,3 +103,56 @@ nb = new_notebook(cells=[md('# Phase 7 · cross-encoder reranker on Phase 1 mode
                          code(c_settings), code(c_setup), code(c_data), code(c_run), code(c_end)])
 nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
 nbformat.write(nb, 'notebooks/phase7_rerank.ipynb'); print('wrote notebooks/phase7_rerank.ipynb')
+
+
+# ---- second notebook: out-of-fold neural scores on train (so the learned ranker can take them as a feature), then final rerankers trained on train + dev
+c_settings2 = c_settings.split('RUNS = [')[0] + """FOLDS = 3
+CF_RUNS = [  # run id, kind, method, pool, checkpoint, overrides
+    ('p7-enc-full', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5)),
+    ('p7-gqa-lorma', 'gqa', 'lorma', 'last', GQA, dict(lr=3e-4)),
+    ('p7-gqa-full', 'gqa', 'full', 'last', GQA, dict(lr=2e-5)),
+]
+FINAL_RUNS = CF_RUNS[:2]"""
+
+c_cross = """# 4 · Cross-fitting: each fold's train queries are scored by a model that never saw them. A finished fold is skipped
+AMP = torch.bfloat16
+def make(run):
+    rid, kind, method, pool, ckpt, o = run
+    return K.build(COURSE_ROOT/ckpt, kind, method, pool, Q_BUDGET + C_BUDGET + 2, adapter_kw=ADAPTER)
+qs = sorted(t[0] for t in DATA['train']); random.Random(SEED).shuffle(qs); FOLD = {q: i % FOLDS for i, q in enumerate(qs)}
+for run in CF_RUNS:
+    rid, kind, method, pool, ckpt, o = run
+    for f in range(FOLDS):
+        d = RUN_DIR/'crossfit'/rid; d.mkdir(parents=True, exist_ok=True); out = d/f'fold{f}.json'
+        if out.is_file(): print('skip', out.name, rid); continue
+        print('=' * 20, rid, 'fold', f)
+        C = dict(BASE, run_id=f'{rid}-cf{f}', kind=kind, method=method, pool=pool, **o)
+        torch.manual_seed(SEED + f); model = make(run)
+        K.train_run(model, dict(DATA, train=[t for t in DATA['train'] if FOLD[t[0]] != f]), d/f'f{f}', C, DEVICE)
+        K.load_best(model, d/f'f{f}'); model.to(DEVICE)
+        held = [(q, x) for q, g, n in DATA['train'] if FOLD[q] == f for x in g + n]
+        K.save_scores(out, K.score_pairs(model, held, DATA['seqs'], DEVICE, AMP, BASE['eval_batch'])); print('wrote', out, len(held))
+        del model; torch.cuda.empty_cache()"""
+
+c_final = """# 5 · Final rerankers on train + dev: dev is now training data, so the last epoch is kept and only test is scored
+extra = list(DATA['train']); seqs = dict(DATA['seqs'])
+q, c = P.load_split(ROOT, 'dev'); docs = K.prepare_docs(K.load_sentences(ROOT, 'dev'), TOK)
+for k in DATA['dev_q']:
+    gold = [g for g in DATA['dev_gold'][k] if g in c and g != k]; neg = [x for x in DATA['dev_rank'][k][:TRAIN_TOP] if x not in set(gold)]; extra.append((k, gold, neg))
+    for x in gold:
+        if (k, x) not in seqs: seqs[k, x] = K.pair_ids(docs, k, x, Q_BUDGET, C_BUDGET)
+del docs; DATA2 = dict(DATA, train=extra, seqs=seqs)
+for run in FINAL_RUNS:
+    rid, kind, method, pool, ckpt, o = run; d = RUN_DIR/'final'/rid
+    if (d/'test_scores.json').is_file(): print('skip', rid); continue
+    print('=' * 20, 'final', rid)
+    C = dict(BASE, run_id=f'{rid}-final', kind=kind, method=method, pool=pool, keep_last=True, **o)
+    torch.manual_seed(SEED); model = make(run); K.train_run(model, DATA2, d, C, DEVICE)
+    K.load_best(model, d); model.to(DEVICE)
+    K.save_scores(d/'test_scores.json', K.score_pairs(model, DATA['test_pairs'], DATA['seqs'], DEVICE, AMP, BASE['eval_batch'])); print('wrote', d)
+    del model; torch.cuda.empty_cache()"""
+
+nb = new_notebook(cells=[md('# Phase 7 · out-of-fold reranker scores and final rerankers\nRun all on a bf16 GPU after `phase7_rerank.ipynb` (reuses its pair cache). Outputs go to `runs/phase7_pcr/crossfit/` and `final/` on Drive; finished parts are skipped; the last cell disconnects the runtime.'),
+                         code(c_settings2), code(c_setup), code(c_data), code(c_cross), code(c_final), code(c_end.replace('# 5 ·', '# 6 ·'))])
+nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
+nbformat.write(nb, 'notebooks/phase7_crossfit.ipynb'); print('wrote notebooks/phase7_crossfit.ipynb')

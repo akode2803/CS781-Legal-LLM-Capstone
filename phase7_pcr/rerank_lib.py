@@ -210,7 +210,7 @@ def train_run(model, data, run_dir, C, device, *, teacher=None, log=print):
         lam, top = max(tab.items(), key=lambda kv: kv[1]['f1'])
         hist.append(dict(epoch=epoch + 1, train_ce=run / max(1, i + 1), top1=ok / max(1, i + 1), best_lam=lam, dev_f1=top['f1'], neural_only=tab['None']['f1'], minutes=(time.time() - t0) / 60))
         log(f"epoch {epoch + 1}: dev F1 {top['f1']:.4f} at lam {lam} | neural alone {tab['None']['f1']:.4f} | lexical {tab['0']['f1']:.4f}")
-        if top['f1'] > best:
+        if top['f1'] > best or C.get('keep_last'):      # keep_last: dev is in the training data, so the last epoch is kept
             best = top['f1']; torch.save({'trainable': R.trainable_state(model), 'epoch': epoch + 1, 'lam': lam, 'table': tab, 'C': C}, run_dir / 'best.pt')
         if stop: break
     res = dict(run_id=C['run_id'], kind=C['kind'], method=C['method'], pool=C['pool'], best_dev_f1=best, history=hist, trainable_params=trainable, total_params=total, trainable_pct=100 * trainable / total,
