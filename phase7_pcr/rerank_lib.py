@@ -18,6 +18,7 @@ import rr_lib as R
 PAD_ID, EOS_ID = 1, 2
 SENT_CAP = 128      # tokens kept per sentence
 GRAM = 4            # n-gram size that picks the excerpt sentences
+CITE_W = 1          # sentences kept either side of a <CITATION> placeholder
 
 
 # ------------------------------------------------------------------ documents and excerpts
@@ -42,7 +43,9 @@ def prepare_docs(sents, tok, max_df=0.05):
         a = np.array(words, np.uint64); h = np.zeros(max(len(a) - GRAM + 1, 0), np.uint64)
         for j in range(GRAM):
             h = h * np.uint64(1000003) + a[j:len(a) - GRAM + 1 + j]
-        docs[k] = dict(tok=[np.array(e.ids[:SENT_CAP] or [PAD_ID], np.int32) for e in enc], h=h, sid=np.array(sid[:len(h)], np.int64))
+        hits = [i for i, s in enumerate(ss) if '<CITATION>' in s]
+        docs[k] = dict(tok=[np.array(e.ids[:SENT_CAP] or [PAD_ID], np.int32) for e in enc], h=h, sid=np.array(sid[:len(h)], np.int64),
+                       cite={j for i in hits for j in range(max(0, i - CITE_W), min(len(ss), i + CITE_W + 1))})
     u, df = np.unique(np.concatenate([np.unique(d['h']) for d in docs.values()]), return_counts=True)
     common = u[df > max(2, max_df * len(docs))]
     for d in docs.values():
@@ -50,14 +53,15 @@ def prepare_docs(sents, tok, max_df=0.05):
     return docs
 
 
-def excerpt(doc, other_u, budget, head=96):
-    """Opening of the document, then the sentences sharing the most rare n-grams with the other document, then the text after the opening; in document order."""
+def excerpt(doc, other_u, budget, head=96, prefer=()):
+    """Opening of the document, then `prefer` sentences, then the sentences sharing the most rare n-grams with the other document, then the text after the opening; in document order."""
     t = doc['tok']; n = len(t)
     cnt = np.bincount(doc['sid'][np.isin(doc['h'], other_u)], minlength=n) if len(doc['h']) else np.zeros(n, int)
     chosen, used, i = set(), 0, 0
     while i < n and used < head:
         chosen.add(i); used += len(t[i]); i += 1
-    for j in list(np.argsort(-cnt, kind='stable')) + list(range(n)):
+    by_count = [int(j) for j in np.argsort(-cnt, kind='stable')]
+    for j in [j for j in by_count if j in prefer] + by_count + list(range(n)):
         if j in chosen or (cnt[j] == 0 and j < i): continue
         if used + len(t[j]) > budget: continue
         chosen.add(int(j)); used += len(t[j])
@@ -65,9 +69,10 @@ def excerpt(doc, other_u, budget, head=96):
     return np.concatenate([t[j] for j in sorted(chosen)])[:budget]
 
 
-def pair_ids(docs, q, c, q_budget, c_budget):
+def pair_ids(docs, q, c, q_budget, c_budget, cite=False):
+    """cite=True fills the query excerpt from the sentences around its <CITATION> placeholders first."""
     a, b = docs[q], docs[c]; eos = np.array([EOS_ID], np.int32)
-    return np.concatenate([excerpt(a, b['u'], q_budget), eos, excerpt(b, a['u'], c_budget), eos])
+    return np.concatenate([excerpt(a, b['u'], q_budget, prefer=a['cite'] if cite else ()), eos, excerpt(b, a['u'], c_budget), eos])
 
 
 def shortlist(q, c, top, n=4, b=0.6, max_df=0.05):
@@ -210,8 +215,9 @@ def train_run(model, data, run_dir, C, device, *, teacher=None, log=print):
         lam, top = max(tab.items(), key=lambda kv: kv[1]['f1'])
         hist.append(dict(epoch=epoch + 1, train_ce=run / max(1, i + 1), top1=ok / max(1, i + 1), best_lam=lam, dev_f1=top['f1'], neural_only=tab['None']['f1'], minutes=(time.time() - t0) / 60))
         log(f"epoch {epoch + 1}: dev F1 {top['f1']:.4f} at lam {lam} | neural alone {tab['None']['f1']:.4f} | lexical {tab['0']['f1']:.4f}")
-        if top['f1'] > best or C.get('keep_last'):      # keep_last: dev is in the training data, so the last epoch is kept
-            best = top['f1']; torch.save({'trainable': R.trainable_state(model), 'epoch': epoch + 1, 'lam': lam, 'table': tab, 'C': C}, run_dir / 'best.pt')
+        key = tab['None']['f1'] if C.get('select_neural') else top['f1']      # select_neural: the neural score alone is a steadier epoch signal than the blend
+        if key > best or C.get('keep_last'):      # keep_last: dev is in the training data, so the last epoch is kept
+            best = key; torch.save({'trainable': R.trainable_state(model), 'epoch': epoch + 1, 'lam': lam, 'table': tab, 'C': C}, run_dir / 'best.pt')
         if stop: break
     res = dict(run_id=C['run_id'], kind=C['kind'], method=C['method'], pool=C['pool'], best_dev_f1=best, history=hist, trainable_params=trainable, total_params=total, trainable_pct=100 * trainable / total,
                minutes=(time.time() - t0) / 60, peak_gpu_gb=torch.cuda.max_memory_allocated() / 1e9 if device.type == 'cuda' else None)

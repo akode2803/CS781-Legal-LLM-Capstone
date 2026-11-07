@@ -156,3 +156,17 @@ nb = new_notebook(cells=[md('# Phase 7 · out-of-fold reranker scores and final 
                          code(c_settings2), code(c_setup), code(c_data), code(c_cross), code(c_final), code(c_end.replace('# 5 ·', '# 6 ·'))])
 nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
 nbformat.write(nb, 'notebooks/phase7_crossfit.ipynb'); print('wrote notebooks/phase7_crossfit.ipynb')
+
+
+# ---- third notebook: the query excerpt is filled from the sentences around <CITATION> placeholders, then longer training
+c_settings3 = c_settings.split('RUNS = [')[0] + """RUNS = [  # run id, kind, method, pool, checkpoint, overrides. The first run changes only the excerpt, so it isolates that change.
+    ('p7c-enc-2ep', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, select_neural=True)),
+    ('p7c-enc', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, epochs=4, pos_per_q=6, max_minutes=70, select_neural=True)),
+    ('p7c-lorma', 'gqa', 'lorma', 'last', GQA, dict(lr=3e-4, epochs=4, pos_per_q=6, max_minutes=60, select_neural=True)),
+]"""
+c_data3 = c_data.replace("_e{EVAL_TOP}.pt'", "_e{EVAL_TOP}_cite.pt'").replace('Q_BUDGET, C_BUDGET)', 'Q_BUDGET, C_BUDGET, cite=True)')
+assert c_data3.count('_cite.pt') == 1 and c_data3.count('cite=True') == 1
+nb = new_notebook(cells=[md('# Phase 7 · reranker reading citing context\nRun all on a bf16 GPU. The query excerpt starts from the sentences around `<CITATION>` placeholders. Outputs go to `runs/phase7_pcr/<run id>/` on Drive; finished runs are skipped; the last cell disconnects the runtime.'),
+                         code(c_settings3), code(c_setup), code(c_data3), code(c_run), code(c_end)])
+nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
+nbformat.write(nb, 'notebooks/phase7_cite.ipynb'); print('wrote notebooks/phase7_cite.ipynb')

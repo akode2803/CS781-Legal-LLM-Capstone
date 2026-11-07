@@ -123,3 +123,18 @@ Feature input never beat the additive blend, and was below the plain ranker for 
 One correct prediction is worth about .0006 test F1 (about 824 hits, 1659 predictions, about 1727 gold), so all differences within the neural entries are 0 to 4 hits, and the train + dev changes are noise-sized in both directions. The neural term over the ranker alone is about 13 hits. Dev cannot score train + dev models, and the `dev_f1` in `final/*/train_results.json` is contaminated: dev was in their training data.
 
 1038611 stays on the leaderboard: nothing beat it, so no entry was chosen from these five test scores.
+
+## Citing context (Nov 7, 15:30 IST)
+
+Queries keep a `<CITATION>` placeholder where each citation was (about 12.7 per dev query, 8.2 gold). The sentences within 1 of a placeholder are 10% of the query text, and overlap from them alone scores dev .4314 (full query .4603); blending the two gives .4758. This uses where a citation sits, not which case it was. No reporter reference, `CITATION:` header or `CITATOR INFO` is read on purpose, and the user approved submitting it. Traces remain in the raw text as in all runs.
+
+Eight columns added to the ranker (`ltr_ctx.py`: n = 3, 4; window 1, 2; log and per-query z). Ranker fit on train, rerankers from the earlier train-only runs:
+
+| ID | Entry | Dev | Test |
+|---|---|---|---|
+| 1038613 | old ranker alone | .4847 | .4790 |
+| 1039873 | citing-context ranker alone | .4947 | .4891 |
+| 1039875 | + LoRMA, w .1 | .4969 | .4914 |
+| 1039874 | + encoder, w .2 (leaderboard) | .4969 | **.4926** |
+
+Test gain over the old ranker alone: +.0101, about 17 hits. Window and blend sizes were picked on dev.
