@@ -79,12 +79,19 @@ qlen = np.array([len(P.tokens(q[k]['text'])) for k in qi]); clen = {k: len(P.tok
 out['query_words'] = dict(median=int(np.median(qlen)), p90=int(np.percentile(qlen, 90)))
 cl = np.array(list(clen.values())); out['cand_words'] = dict(median=int(np.median(cl)), p90=int(np.percentile(cl, 90)))
 out['by_query_words'] = bucket(qlen, [0, 2000, 4000, 8000, 16000, 10**7])
+CAP = np.minimum(NG, K); out['reachable_by_query_words'] = [dict(range=[int(x), int(y)], n=int(m.sum()), reachable=int(CAP[m].sum()), hits=int(H['final'][m].sum()), share=round(float(H['final'][m].sum() / CAP[m].sum()), 3), mean_gold=round(float(NG[m].mean()), 1)) for x, y in zip([0, 2000, 4000, 8000, 16000], [2000, 4000, 8000, 16000, 10**7]) for m in [(qlen >= x) & (qlen < y)]]
+out['reachable_by_gold_size'] = [dict(range=[int(x), int(y)], reachable=int(CAP[m].sum()), share=round(float(H['final'][m].sum() / CAP[m].sum()), 3)) for x, y in zip([1, 3, 6, 11, 21], [3, 6, 11, 21, 1000]) for m in [(NG >= x) & (NG < y)]]
+out['qlen_vs_gold_spearman'] = round(float(spearmanr(qlen, NG)[0]), 3)
 cites = np.array([q[k]['text'].count('<CITATION>') for k in qi]); out['by_placeholders'] = bucket(cites, [0, 1, 5, 11, 21, 10**5])
 out['placeholders_vs_gold_spearman'] = round(float(spearmanr(cites, NG)[0]), 3)
 # candidate length: share of gold candidates retrieved, per length band
 g_all = [(k, x) for k in qi for x in gold[k] if x in clen]; hit = {(k, x) for k in qi for x in top(blend)[k] if x in gold[k]} if 0 else None
 T = top(blend); g_len = np.array([clen[x] for _, x in g_all]); g_hit = np.array([x in T[k] for k, x in g_all])
 out['gold_recall_by_cand_words'] = [dict(range=[a, b], n=int(((g_len >= a) & (g_len < b)).sum()), recall=round(float(g_hit[(g_len >= a) & (g_len < b)].mean()), 3)) for a, b in zip([0, 1000, 2000, 4000, 8000], [1000, 2000, 4000, 8000, 10**7]) if ((g_len >= a) & (g_len < b)).any()]
+# same, only for queries the 7-slot cap does not bind on, plus where those gold candidates sit in the lexical list
+g_small = np.array([len(gold[k]) <= K for k, _ in g_all]); bands = list(zip([0, 1000, 2000, 4000, 8000], [1000, 2000, 4000, 8000, 10**7]))
+g_rank = np.array([Xd[idxp[k, x], 15] if (k, x) in idxp else 999 for k, x in g_all]) if (idxp := {(a_, b_): i for i, (a_, b_) in enumerate(zip(Gd, Id))}) else None
+out['gold_recall_by_cand_words_uncapped'] = [dict(range=[a_, b_], n=int(m.sum()), recall=round(float(g_hit[m].mean()), 3), in_lexical_top100=round(float((g_rank[m] < 100).mean()), 3), in_lexical_top7=round(float((g_rank[m] < 7).mean()), 3)) for a_, b_ in bands for m in [g_small & (g_len >= a_) & (g_len < b_)]]
 # popularity: how many dev queries cite a candidate; do we favour landmark cases
 cited = {}
 for k in qi:

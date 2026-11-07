@@ -183,6 +183,106 @@
    "f1": 0.361
   }
  ],
+ "reachable_by_query_words": [
+  {
+   "range": [
+    0,
+    2000
+   ],
+   "n": 18,
+   "reachable": 37,
+   "hits": 24,
+   "share": 0.649,
+   "mean_gold": 2.1
+  },
+  {
+   "range": [
+    2000,
+    4000
+   ],
+   "n": 35,
+   "reachable": 151,
+   "hits": 112,
+   "share": 0.742,
+   "mean_gold": 4.7
+  },
+  {
+   "range": [
+    4000,
+    8000
+   ],
+   "n": 39,
+   "reachable": 209,
+   "hits": 172,
+   "share": 0.823,
+   "mean_gold": 7.7
+  },
+  {
+   "range": [
+    8000,
+    16000
+   ],
+   "n": 15,
+   "reachable": 86,
+   "hits": 75,
+   "share": 0.872,
+   "mean_gold": 12.1
+  },
+  {
+   "range": [
+    16000,
+    10000000
+   ],
+   "n": 11,
+   "reachable": 73,
+   "hits": 66,
+   "share": 0.904,
+   "mean_gold": 26.3
+  }
+ ],
+ "reachable_by_gold_size": [
+  {
+   "range": [
+    1,
+    3
+   ],
+   "reachable": 51,
+   "share": 0.863
+  },
+  {
+   "range": [
+    3,
+    6
+   ],
+   "reachable": 127,
+   "share": 0.701
+  },
+  {
+   "range": [
+    6,
+    11
+   ],
+   "reachable": 182,
+   "share": 0.736
+  },
+  {
+   "range": [
+    11,
+    21
+   ],
+   "reachable": 133,
+   "share": 0.902
+  },
+  {
+   "range": [
+    21,
+    1000
+   ],
+   "reachable": 63,
+   "share": 0.984
+  }
+ ],
+ "qlen_vs_gold_spearman": 0.615,
  "by_placeholders": [
   {
    "range": [
@@ -274,6 +374,58 @@
    ],
    "n": 228,
    "recall": 0.32
+  }
+ ],
+ "gold_recall_by_cand_words_uncapped": [
+  {
+   "range": [
+    0,
+    1000
+   ],
+   "n": 40,
+   "recall": 0.5,
+   "in_lexical_top100": 0.675,
+   "in_lexical_top7": 0.35
+  },
+  {
+   "range": [
+    1000,
+    2000
+   ],
+   "n": 44,
+   "recall": 0.727,
+   "in_lexical_top100": 0.841,
+   "in_lexical_top7": 0.614
+  },
+  {
+   "range": [
+    2000,
+    4000
+   ],
+   "n": 78,
+   "recall": 0.756,
+   "in_lexical_top100": 0.872,
+   "in_lexical_top7": 0.692
+  },
+  {
+   "range": [
+    4000,
+    8000
+   ],
+   "n": 73,
+   "recall": 0.836,
+   "in_lexical_top100": 0.89,
+   "in_lexical_top7": 0.795
+  },
+  {
+   "range": [
+    8000,
+    10000000
+   ],
+   "n": 48,
+   "recall": 0.667,
+   "in_lexical_top100": 0.812,
+   "in_lexical_top7": 0.583
   }
  ],
  "gold_recall_by_times_cited": [

@@ -172,3 +172,5 @@ Conclusion: test has plateaued at about .493. The reranker adds about .004 on to
 ## Report evidence (Nov 7)
 
 `report_analysis.py` rebuilds the final blend on dev (.4992, 449 hits) and writes `report/analysis.json`; `report/EVIDENCE.md` holds the facts in template order, and `report_figures.py` makes the figures. Facts only: analysis prose waits on the template's LLM rule.
+
+Report text is in `report/phase7_sections.tex`, with `report/ANALYSIS_EXPLAINED.md` as the walkthrough. New control: raw recall falls with query length (.68 to .23), but hits over min(gold, 7) rise (.65 to .90), so the fall is the 7-slot cap. With the cap removed, recall by gold candidate length is .50 (<1k words), .84 (4-8k) and .67 (8k+).

@@ -1,6 +1,6 @@
 # Phase 7 report evidence
 
-Facts and numbers only, laid out in the order of the course template. There is no interpretation here on purpose: the analysis and conclusions sections are still to be written (see the LLM rule in the template). Dev numbers come from `report/analysis.json` (`report_analysis.py`), run logs and `FINDINGS.md`.
+Facts and numbers only, laid out in the order of the course template. The report text built from these facts is `phase7_sections.tex`. Dev numbers come from `report/analysis.json` (`report_analysis.py`), run logs and `FINDINGS.md`.
 
 ## Section 1: competition result
 
@@ -105,4 +105,16 @@ Rank correlation inside the top 50: GQA full with encoder .69, LoRMA .76, KD .82
 | 8-16k | 15 | 181 | .414 | | 4-8k | 257 | .506 |
 | 16k+ | 11 | 289 | .228 | | 8k+ | 228 | .320 |
 
-Query length and gold count move together, so the query-length column is not a clean length effect. Figures: `fig_gold_size.pdf`, `fig_length.pdf`.
+Query length and gold count move together (Spearman .615), so the query-length column is not a clean length effect. Hits as a share of reachable slots, min(gold, 7), by query length: .649, .742, .823, .872, .904.
+
+Gold candidates in queries with at most 7 gold, by candidate length:
+
+| Words | Pairs | Recall | In lexical top 7 | In lexical top 100 |
+|---|---|---|---|---|
+| <1k | 40 | .500 | .350 | .675 |
+| 1-2k | 44 | .727 | .614 | .841 |
+| 2-4k | 78 | .756 | .692 | .872 |
+| 4-8k | 73 | .836 | .795 | .890 |
+| 8k+ | 48 | .667 | .583 | .812 |
+
+Figures: `fig_gold_size.pdf`, `fig_length.pdf`.
