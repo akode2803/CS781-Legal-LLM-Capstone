@@ -1,6 +1,6 @@
 # Phase 7 analysis, explained
 
-This goes with `phase7_sections.tex`. For each claim: what it means, the evidence, and what an examiner may push on. All numbers are in `EVIDENCE.md`; `report_analysis.py` regenerates the dev ones.
+This goes with `phase7_sections.tex` (trimmed for the report; some detail below is only in `phase7_sections_full.tex`, so be ready to explain it without the page). For each claim: what it means, the evidence, and what an examiner may push on. All numbers are in `EVIDENCE.md`; `report_analysis.py` regenerates the dev ones.
 
 ## How to read the numbers
 
