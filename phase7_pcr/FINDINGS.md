@@ -18,7 +18,14 @@ Recall of that ranking on dev: top 7 0.425, top 20 0.623, top 50 0.742, top 100 
 
 | Submission | Test F1 | Precision | Recall | Dev F1 |
 |---|---|---|---|---|
-| `p7-shingle4-b06-hdrdate.zip` (1038437, on leaderboard) | 0.4554 | 0.4647 | 0.4464 | 0.4603 |
+| `p7-shingle4-b06-hdrdate.zip` (1038437) | 0.4554 | 0.4647 | 0.4464 | 0.4603 |
+| `p7-ltr-lexical.zip` (1038613), learned ranker alone | 0.4790 | 0.4888 | 0.4696 | 0.4858 |
+| `p7-ltr-gqa-full.zip` (1038614) | 0.4838 | 0.4937 | 0.4742 | 0.4892 |
+| `p7-ltr-enc-full.zip` (1038608) | 0.4849 | 0.4949 | 0.4754 | 0.4925 |
+| `p7-ltr-gqa-kd.zip` (1038612) | 0.4849 | 0.4949 | 0.4754 | 0.4914 |
+| **`p7-ltr-gqa-lorma.zip` (1038611, on leaderboard)** | **0.4867** | 0.4967 | 0.4771 | 0.4892 |
+
+Test tracks dev closely. Every neural blend beats the learned ranker alone, by 0.005-0.008. The differences among the four neural entries are a few hits and within noise; LoRMA trains 0.31% of the parameters, and the KD student scores pairs about twice as fast as the others.
 
 ## Reranker analysis (p7-gqa-full, dev)
 
