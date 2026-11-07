@@ -91,3 +91,35 @@ The organisers masked citations, but traces survive: header `CITATION:` and `CIT
 Removing the traces from the text (`scrub`, 0.5% of characters) lowers the plain lexical score slightly: dev 0.4603 to 0.4569, train 0.3760 to 0.3747. Our own match patterns find nothing afterwards; that does not prove every trace is gone.
 
 Submission 1038437 (test 0.4554) was built on unscrubbed text, so it did not match citations explicitly but did read the traces.
+
+## Out-of-fold neural features and train + dev retraining (Nov 7, 07:45 IST)
+
+Three-fold cross-fitting gave every train query a reranker score from a model that never saw that query (`ltr_neural.py`), and encoder and LoRMA were retrained on train + dev (`ltr_final.py`). Neither idea beat the existing best entry.
+
+**Idea 1, neural score as a ranker feature (dev, top-50 rows; ranker with no neural = 0.488, 439 hits):**
+
+| Neural source | As feature | Additive w .1 | w .2 | w .3 |
+|---|---|---|---|---|
+| encoder full | .4914 | .4903 | **.4947** | .4936 |
+| GQA LoRMA | .4814 | .4903 | .4903 | .4836 |
+| GQA full | .4847 | .4880 | .4903 | .4903 |
+| all three | .4847 | .4892 | .4925 | .4914 |
+
+Feature input never beat the additive blend, and was below the plain ranker for two of the four sources. It was not submitted.
+
+**Idea 2, train + dev retraining (test, Codabench). Additive w .2, lexical-only ranker:**
+
+| ID | Ranker fit on | Reranker fit on | Test F1 |
+|---|---|---|---|
+| 1038613 | train | none | .4790 |
+| 1038845 | train + dev | none | .4784 |
+| 1038611 (leaderboard) | train | LoRMA, train | **.4867** |
+| 1038844 | train + dev | LoRMA, train | .4849 |
+| 1038842 | train + dev | LoRMA, train + dev | .4843 |
+| 1038608 | train | encoder, train | .4849 |
+| 1038841 | train + dev | encoder, train + dev | **.4867** |
+| 1038843 | train + dev | encoder + LoRMA, train + dev | .4855 |
+
+One correct prediction is worth about .0006 test F1 (about 824 hits, 1659 predictions, about 1727 gold), so all differences within the neural entries are 0 to 4 hits, and the train + dev changes are noise-sized in both directions. The neural term over the ranker alone is about 13 hits. Dev cannot score train + dev models, and the `dev_f1` in `final/*/train_results.json` is contaminated: dev was in their training data.
+
+1038611 stays on the leaderboard: nothing beat it, so no entry was chosen from these five test scores.
