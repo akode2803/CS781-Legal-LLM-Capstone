@@ -46,7 +46,20 @@ Failed or unhelpful: neural score as ranker input; train + dev retraining; 4-epo
 | Partial | top 4 blocks (12-15) |
 | Epoch selection | blended dev F1; neural-only dev F1 for the p7c runs |
 
-No GPU run tested pooling, loss or negative sampling one factor at a time, and there is no frozen or random-init control. Those template prompts have no direct evidence yet.
+One-factor controls (`notebooks/phase7_controls.ipynb`, dev only, seed 17, 2 epochs, old excerpts; `report/controls.json`, `report/controls_blend.json`). Baseline p7-enc-full unless stated. Hits = citing-context ranker + 0.2 z(model); ranker alone 445.
+
+| Run | Neural F1 | Diff [95% paired] | AUC top 50 | Hits | rho with ranker |
+|---|---|---|---|---|---|
+| Encoder baseline | .3391 | - | .771 | 447 | .245 |
+| Pairwise loss | .3324 | -.0067 [-.0173, .0035] | .765 | 447 | .236 |
+| Random negatives | .4002 | +.0611 [.0363, .0886] | .881 | 442 | .555 |
+| Last-token pooling | .3079 | -.0311 [-.0501, -.0135] | .747 | 444 | .215 |
+| Frozen, head only (1,025 params) | .2379 | -.1012 [-.1282, -.0757] | .676 | 447 | .184 |
+| Random start, lr 1e-4 | .1946 | -.1445 [-.1784, -.1119] | .629 | 444 | .102 |
+| GQA baseline p7-gqa-full | .3168 | - | .756 | 442 | not run |
+| GQA mean pooling | .3357 | +.0189 [-.0021, .0406] | .779 | 444 | .234 |
+
+Scale: seed s.d. .0097 neural F1 and .0106 AUC (five p7c-enc seeds, which use citing-context excerpts, so only a rough scale here). Chance in the top 50 is F1 .1124 (722 gold in top 50, 101 expected hits). Blend against the single enc-full blend: random negatives [-.0110, -.0011], all others include 0; uncorrected for six comparisons. Frozen's saved scores are epoch 1, because fused dev F1 tied and ties keep the first epoch; epoch 2 was .2457. Random negatives were drawn from the whole train pool, gold and self excluded, and dev is still scored on the lexical top 50, so their train top-1 (.87) is not comparable with the baseline's (.55).
 
 ## Section 6: techniques (same pipeline, dev)
 

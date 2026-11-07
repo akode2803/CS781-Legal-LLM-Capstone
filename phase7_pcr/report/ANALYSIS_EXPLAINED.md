@@ -26,9 +26,19 @@ This goes with `phase7_sections.tex`. For each claim: what it means, the evidenc
 
 **7. Remaining errors are mostly citations without shared text.** Hits have overlap z 3.37, missed gold .56. The neural term could fix these in principle, but it swapped only 58 of 826 entries, and its excerpts are chosen by the same n-gram overlap. That link is a hypothesis.
 
+**8. The controls: a better model alone can be a worse part of the system.** Read these against the seed spread: s.d. about .01 neural F1, so anything under about .02 is noise.
+
+- *Transfer:* random start .1946, frozen .2379, full .3391, chance .1124. Frozen trains only a 1,025-parameter head and still beats a fully trained random start, so Phase 1 weights carry usable signal, and fine-tuning adds more.
+- *Pooling:* mean beats last on the encoder (-.0311, interval excludes 0). This is expected: an MLM encoder has no reason to summarise a document into its final token. On GQA, mean is +.0189 but the interval includes 0, so call it unresolved, even though a causal model's last token is the usual choice.
+- *Loss:* pairwise against softmax, -.0067, no difference.
+- *Negatives:* random negatives are the surprise. Neural F1 rises to .4002 (+.0611), but the blend drops to 442 hits from 447. Why: telling a gold case from a random case teaches broad topic match. That also lifts scores inside the top 50, but the ranker already knows it, as the correlation with the ranker shows (.555 against .245). Hard negatives share vocabulary with the query, so the model must use something else. It scores worse alone but adds more. If asked "why not use the better model?": the deployed quantity is the blend, and the blend got worse.
+- *Blend resolution:* frozen ties full at 447, and the whole range is 442 to 447, or 5 hits. The blend can't rank these models, which is why claims about them use neural-only scores.
+
 ## Weak points to admit first
 
-- Pooling, loss and negatives were never varied alone, and there is no frozen or random-start control. So "Phase 1 transfer helped" is not proven; we only know that fine-tuned models add a little.
+- Each control has one seed. Random start was tried at one learning rate (1e-4) for two epochs, so "Phase 1 helps" holds for this budget, not in general.
+- Phase 1 transfer shows up in standalone scores only. In the blend, a frozen model ties full fine-tuning at 447 hits, so don't claim fine-tuning caused the blended gain.
+- "Random negatives learn what the ranker already knows" is an interpretation. The evidence is one correlation (.555 against .245).
 - Blend settings were picked on dev from about 15 combinations.
 - The ranker and citing-context features are not Phase 1 models.
 - `<CITATION>` position is used, which you approved as different from case identity. Traces stay in the text, unscrubbed, and our features read them indirectly. Expect a question on this; the answer is that deliberate matching was measured, rejected and never submitted.

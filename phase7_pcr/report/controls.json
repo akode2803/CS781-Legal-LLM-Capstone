@@ -1,0 +1,171 @@
+{
+ "p7x-enc-pairwise": {
+  "what": "loss: pairwise, not listwise",
+  "baseline": "p7-enc-full",
+  "f1": 0.3324,
+  "base_f1": 0.3391,
+  "diff": -0.0067,
+  "ci": [
+   -0.0173,
+   0.0035
+  ],
+  "auc": 0.7649,
+  "base_auc": 0.7707,
+  "trainable_pct": 100.0,
+  "minutes": 11.8,
+  "peak_gb": 12.0,
+  "top1": [
+   0.32,
+   0.545
+  ],
+  "neural_by_epoch": [
+   0.3057,
+   0.3324
+  ]
+ },
+ "p7x-enc-randneg": {
+  "what": "negatives: random, not lexical top 40",
+  "baseline": "p7-enc-full",
+  "f1": 0.4002,
+  "base_f1": 0.3391,
+  "diff": 0.0611,
+  "ci": [
+   0.0363,
+   0.0886
+  ],
+  "auc": 0.8814,
+  "base_auc": 0.7707,
+  "trainable_pct": 100.0,
+  "minutes": 11.7,
+  "peak_gb": 11.7,
+  "top1": [
+   0.706,
+   0.871
+  ],
+  "neural_by_epoch": [
+   0.3858,
+   0.4002
+  ]
+ },
+ "p7x-enc-last": {
+  "what": "encoder pooling: last, not mean",
+  "baseline": "p7-enc-full",
+  "f1": 0.3079,
+  "base_f1": 0.3391,
+  "diff": -0.0311,
+  "ci": [
+   -0.0501,
+   -0.0135
+  ],
+  "auc": 0.7474,
+  "base_auc": 0.7707,
+  "trainable_pct": 100.0,
+  "minutes": 11.8,
+  "peak_gb": 12.0,
+  "top1": [
+   0.314,
+   0.537
+  ],
+  "neural_by_epoch": [
+   0.2813,
+   0.3079
+  ]
+ },
+ "p7x-gqa-mean": {
+  "what": "GQA pooling: mean, not last",
+  "baseline": "p7-gqa-full",
+  "f1": 0.3357,
+  "base_f1": 0.3168,
+  "diff": 0.0189,
+  "ci": [
+   -0.0021,
+   0.0406
+  ],
+  "auc": 0.7785,
+  "base_auc": 0.7562,
+  "trainable_pct": 100.0,
+  "minutes": 9.9,
+  "peak_gb": 12.0,
+  "top1": [
+   0.357,
+   0.584
+  ],
+  "neural_by_epoch": [
+   0.3035,
+   0.3357
+  ]
+ },
+ "p7x-enc-frozen": {
+  "what": "transfer: frozen, head only",
+  "baseline": "p7-enc-full",
+  "f1": 0.2379,
+  "base_f1": 0.3391,
+  "diff": -0.1012,
+  "ci": [
+   -0.1282,
+   -0.0757
+  ],
+  "auc": 0.6759,
+  "base_auc": 0.7707,
+  "trainable_pct": 0.0,
+  "minutes": 4.3,
+  "peak_gb": 1.9,
+  "top1": [
+   0.281,
+   0.326
+  ],
+  "neural_by_epoch": [
+   0.2379,
+   0.2457
+  ]
+ },
+ "p7x-enc-random": {
+  "what": "transfer: random start, no Phase 1",
+  "baseline": "p7-enc-full",
+  "f1": 0.1946,
+  "base_f1": 0.3391,
+  "diff": -0.1445,
+  "ci": [
+   -0.1784,
+   -0.1119
+  ],
+  "auc": 0.6289,
+  "base_auc": 0.7707,
+  "trainable_pct": 100.0,
+  "minutes": 11.7,
+  "peak_gb": 12.0,
+  "top1": [
+   0.256,
+   0.384
+  ],
+  "neural_by_epoch": [
+   0.1946,
+   0.1934
+  ]
+ },
+ "seed_spread": {
+  "runs": [
+   "p7c-enc-2ep",
+   "p7c-enc-s101",
+   "p7c-enc-s102",
+   "p7c-enc-s103",
+   "p7c-enc-s104"
+  ],
+  "f1": [
+   0.3469,
+   0.3446,
+   0.3457,
+   0.3513,
+   0.368
+  ],
+  "f1_sd": 0.0097,
+  "auc": [
+   0.7998,
+   0.7953,
+   0.7972,
+   0.7908,
+   0.8184
+  ],
+  "auc_sd": 0.0106
+ }
+}

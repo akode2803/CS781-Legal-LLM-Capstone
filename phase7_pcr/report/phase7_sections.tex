@@ -18,7 +18,28 @@ s(q,c) = z_q\big(\mathrm{logit}\,r(q,c)\big) + 0.2\cdot\frac{1}{3}\sum_{m=1}^{3}
 where $z_q$ standardises within a query, $r$ is the ranker and $n_m$ are the encoder and two citing-context rerankers. Four ideas failed: feeding the neural score to the ranker as a feature (below the best additive blend for every source tested), retraining on train and dev (no test gain), training for four epochs (train top-1 reached 0.95 while neural dev F1 stayed near 0.32), and averaging more seeds (test 0.4932 against 0.4938).
 
 % ---------- Section 5.3, Ablations ----------
-\paragraph{Phase 7.} Table~\ref{tab:p7methods} changes only the adaptation method on the same pairs and schedule, apart from the learning rate. Table~\ref{tab:p7steps} adds one pipeline stage at a time. We did not vary pooling, loss or negative sampling independently, and we have no frozen or random-initialisation control, so we make no causal claim about those factors.
+\paragraph{Phase 7.} Table~\ref{tab:p7methods} changes only the adaptation method on the same pairs and schedule, apart from the learning rate. Table~\ref{tab:p7steps} adds one pipeline stage at a time. Table~\ref{tab:p7controls} changes one training factor at a time from the full fine-tuning baselines. Each control has one seed, so we call a difference real only if its interval excludes zero and it clearly exceeds the seed spread (s.d. 0.0097 neural F1 over five encoder seeds).
+
+\begin{table}[H]
+\centering\small
+\caption{Phase 7 one-factor controls on dev. Neural F1 ranks the lexical top 50 by the model alone (chance 0.112). Intervals are paired query bootstraps against the baseline. Hits: added to the citing-context ranker at weight 0.2 (ranker alone 445).}
+\label{tab:p7controls}
+\begin{tabular}{lcccc}
+\toprule
+Run & Neural F1 & Difference [95\% interval] & AUC & Hits \\
+\midrule
+Encoder baseline & 0.3391 & -- & 0.771 & 447 \\
+Pairwise loss & 0.3324 & $-0.0067$ [$-0.0173$, 0.0035] & 0.765 & 447 \\
+Random negatives & 0.4002 & $+0.0611$ [0.0363, 0.0886] & 0.881 & 442 \\
+Last-token pooling & 0.3079 & $-0.0311$ [$-0.0501$, $-0.0135$] & 0.747 & 444 \\
+Frozen backbone, head only & 0.2379 & $-0.1012$ [$-0.1282$, $-0.0757$] & 0.676 & 447 \\
+Random start, no Phase 1 & 0.1946 & $-0.1445$ [$-0.1784$, $-0.1119$] & 0.629 & 444 \\
+\midrule
+GQA baseline (last token) & 0.3168 & -- & 0.756 & 442 \\
+GQA mean pooling & 0.3357 & $+0.0189$ [$-0.0021$, 0.0406] & 0.779 & 444 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{table}[H]
 \centering\small
@@ -60,6 +81,8 @@ Word 4-gram overlap & 0.4603 & 414 & 0.4554 & \\
 
 The adaptation methods are nearly indistinguishable once blended: all seven lie within five dev hits. Scored alone, the encoder beats GQA full fine-tuning (+0.0222, interval [0.0032, 0.0422], uncorrected for six comparisons), though backbone and pooling both differ. LoRMA \cite{bihany2025lorma} matches full fine-tuning with 0.31\% of the weights and about half the memory, and was the best single entry of the older test group. We suspect data scarcity rather than the method itself: with 827 training queries, full fine-tuning has more capacity than the supervision can use, which fits the overfitting seen in longer runs, but we did not test this directly. LoRA \cite{hu2022lora} and IA$^3$ \cite{liu2022ia3} behave similarly.
 
+The controls in Table~\ref{tab:p7controls} separate standalone quality from value in the blend. Phase 1 transfer is real for the standalone model: a random start reaches 0.1946 under the same budget (with a higher learning rate, 1e-4), a frozen backbone with a 1,025-parameter head reaches 0.2379, and full fine-tuning reaches 0.3391. Mean pooling beats last-token pooling on the encoder, and the same direction on GQA is not resolved. Pairwise and listwise losses do not differ. Random negatives gave the largest standalone gain of any change we tried, yet the worst blend: 442 hits against 447 (difference interval $[-0.0110, -0.0011]$, uncorrected). Their scores correlate 0.555 with the ranker inside the top 50, against 0.245 for the hard-negative model, so we read this as the model learning topical relatedness that the ranker already has, while hard negatives force it towards what lexical overlap misses. The correlation supports that reading but does not prove it. The blend itself is a blunt instrument: the frozen model ties the fine-tuned one at 447 hits, so the small blended gain cannot be credited to fine-tuning.
+
 Knowledge distillation \cite{hinton2015distilling} halved the depth, cut parameters by 42\% and doubled scoring speed, but the student lost a third of its standalone quality (neural F1 0.2079 against 0.3168, interval on the difference $[-0.1385, -0.0806]$). Its blended scores equal the others only because the blend cannot resolve such differences, so this does not show that distillation preserved quality. It suggests that a much cheaper reranker may be enough for this pipeline's small correction, and on test the student matched the full encoder at 0.4849.
 
 % ---------- Section 7.1, Failure modes ----------
@@ -80,10 +103,10 @@ The main remaining error is semantic citation. Missed gold cases have a mean per
 Micro-F1@7 pools hits across queries, so the nine dev queries with 21 or more gold cases hold a third of all gold yet can yield few hits. Gold labels also record citation, not legal relevance: an uncited but relevant precedent counts as an error.
 
 % ---------- Section 7.3, Limitations and next steps ----------
-For Phase 7, the blend gains are a few hits, and one hit is worth about 0.0006 test F1. Our pool-level feature depends on the queries in a split, and both ranker and citing-context features are outside the Phase 1 models. Next we would run the missing controls (frozen and random-initialised backbones, mean against last pooling on one backbone, pairwise against listwise loss, random against hard negatives), then score chunks of each candidate rather than one excerpt, so the neural stage can see text the lexical stage did not select.
+For Phase 7, the blend gains are a few hits, and one hit is worth about 0.0006 test F1. Our pool-level feature depends on the queries in a split, and both ranker and citing-context features are outside the Phase 1 models. The controls use one seed each, and the random start was tried at one learning rate for two epochs, so it bounds transfer only under this budget. Next we would score chunks of each candidate rather than one excerpt, so the neural stage can see text the lexical stage did not select, and test a mix of hard and random negatives.
 
 % ---------- Section 7.4, Surprising findings ----------
-In Phase 7, a position-only signal was worth more than any neural model: citing-context features added 17 test hits and the three rerankers about eight. Also, the apparent collapse in recall on long queries disappeared once we accounted for the seven-slot cap.
+In Phase 7, a position-only signal was worth more than any neural model: citing-context features added 17 test hits and the three rerankers about eight. The apparent collapse in recall on long queries disappeared once we accounted for the seven-slot cap. Random negatives were the biggest surprise: they raised standalone F1 by 0.061 and still lowered the blended score, so the better model alone was the worse component.
 
 % ---------- Why techniques do or do not transfer (Section 7.1 or 8) ----------
 Methods that suit our classification phases need not suit Phase 7. There, a label is predicted from one document's content, and pretrained representations can summarise it. PCR depends on a relation between two long documents, often verbatim reuse, which exact n-gram matching captures directly and a 1024-token excerpt only partly preserves.

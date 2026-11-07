@@ -174,3 +174,9 @@ Conclusion: test has plateaued at about .493. The reranker adds about .004 on to
 `report_analysis.py` rebuilds the final blend on dev (.4992, 449 hits) and writes `report/analysis.json`; `report/EVIDENCE.md` holds the facts in template order, and `report_figures.py` makes the figures. Facts only: analysis prose waits on the template's LLM rule.
 
 Report text is in `report/phase7_sections.tex`, with `report/ANALYSIS_EXPLAINED.md` as the walkthrough. New control: raw recall falls with query length (.68 to .23), but hits over min(gold, 7) rise (.65 to .90), so the fall is the 7-slot cap. With the cap removed, recall by gold candidate length is .50 (<1k words), .84 (4-8k) and .67 (8k+).
+
+## One-factor controls (Nov 7)
+
+Six dev-only runs (`notebooks/phase7_controls.ipynb`, `report_controls.py`, `report_controls_blend.py`). Neural-only F1 against enc-full .3391: pairwise .3324, random negatives .4002, last-token .3079, frozen .2379, random start .1946; GQA mean .3357 against .3168. Blended with the ranker at w .2, hits: baseline 447, pairwise 447, random negatives 442, last 444, frozen 447, random start 444, GQA mean 444 (GQA last 442).
+
+Main result: random negatives win alone and lose in the blend, with correlation to the ranker .555 against .245. Added to the final three they gave 448 hits against 449, so no test scoring or new submission. Full table in `report/EVIDENCE.md`.
