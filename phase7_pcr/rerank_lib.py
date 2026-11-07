@@ -121,6 +121,14 @@ def build(checkpoint, kind, method, pool, context, adapter_kw=None, layer_keep=N
     return m
 
 
+def randomize(model):
+    """Control run: replaces the Phase 1 weights with a fresh initialisation, keeping the architecture."""
+    for n, p in model.backbone.named_parameters():
+        if p.ndim >= 2: nn.init.normal_(p, std=.02)
+        elif n.endswith('bias'): nn.init.zeros_(p)
+        else: nn.init.ones_(p)
+
+
 def pack(seqs, device):
     L = max(len(s) for s in seqs); ids = torch.full((len(seqs), L), PAD_ID, dtype=torch.long)
     for i, s in enumerate(seqs): ids[i, :len(s)] = torch.from_numpy(s.astype(np.int64))
@@ -182,7 +190,7 @@ def train_run(model, data, run_dir, C, device, *, teacher=None, log=print):
         for p in teacher.parameters(): p.requires_grad_(False)
     head = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith('head.')]
     body = [p for n, p in model.named_parameters() if p.requires_grad and not n.startswith('head.')]
-    opt = torch.optim.AdamW([dict(params=body, lr=C['lr']), dict(params=head, lr=C['lr_head'])], betas=(.9, .95), weight_decay=.01)
+    opt = torch.optim.AdamW([g for g in (dict(params=body, lr=C['lr']), dict(params=head, lr=C['lr_head'])) if g['params']], betas=(.9, .95), weight_decay=.01)
     rng = random.Random(C['seed']); seqs = data['seqs']
     n_groups = len(groups(data['train'], C, random.Random(0))); total_steps = max(1, C['epochs'] * n_groups // C['accum']); warm = max(1, int(.05 * total_steps))
     base = [g['lr'] for g in opt.param_groups]; amp = torch.bfloat16 if device.type == 'cuda' and torch.cuda.is_bf16_supported() else torch.float16
@@ -198,7 +206,7 @@ def train_run(model, data, run_dir, C, device, *, teacher=None, log=print):
                 s = model(ids, ln)
                 if teacher is not None:
                     with torch.no_grad(): ts = teacher(ids, ln)
-            s = s.float()[None]; tgt = torch.zeros(1, dtype=torch.long, device=device); ce = F.cross_entropy(s, tgt); loss = ce
+            s = s.float()[None]; tgt = torch.zeros(1, dtype=torch.long, device=device); ce = F.softplus(s[:, 1:] - s[:, :1]).mean() if C.get('loss') == 'pairwise' else F.cross_entropy(s, tgt); loss = ce
             if teacher is not None:
                 T = C['kd_t']; kl = F.kl_div(F.log_softmax(s / T, -1), F.log_softmax(ts.float()[None] / T, -1), log_target=True, reduction='batchmean') * T * T
                 loss = C['kd_alpha'] * ce + (1 - C['kd_alpha']) * kl; kls.append(float(kl))

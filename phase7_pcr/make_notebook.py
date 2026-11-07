@@ -191,3 +191,39 @@ nb = new_notebook(cells=[md('# Phase 7 · encoder reranker seeds\nFour seeds of 
                          code(c_settings4), code(c_setup), code(c_data3), code(c_run4), code(c_end)])
 nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
 nbformat.write(nb, 'notebooks/phase7_seeds.ipynb'); print('wrote notebooks/phase7_seeds.ipynb')
+
+
+# ---- one-factor controls for the report: each run changes one thing from p7-enc-full or p7-gqa-full. Dev only, since none of these is a submission.
+c_settings5 = c_settings.split('RUNS = [')[0] + """RUNS = [  # run id, kind, method, pool, checkpoint, overrides
+    ('p7x-enc-pairwise', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, loss='pairwise')),                # loss: pairwise logistic, baseline listwise softmax
+    ('p7x-enc-randneg', 'encoder', 'full', 'mean', ENC, dict(lr=2e-5, negatives='random')),              # negatives: random pool cases, baseline lexical top 40
+    ('p7x-enc-last', 'encoder', 'full', 'last', ENC, dict(lr=2e-5)),                                     # pooling: last token, baseline mean
+    ('p7x-gqa-mean', 'gqa', 'full', 'mean', GQA, dict(lr=2e-5)),                                         # pooling: mean, baseline last token (p7-gqa-full)
+    ('p7x-enc-frozen', 'encoder', 'partial', 'mean', ENC, dict(lr=2e-5, lr_head=1e-3)),                  # transfer: no block trained, head only
+    ('p7x-enc-random', 'encoder', 'full', 'mean', ENC, dict(lr=1e-4, randomize=True)),                   # transfer: no Phase 1 weights; higher lr gives scratch a fair chance
+]"""
+c_rand = """# 4 · Random negatives: same number per query as the lexical list, from the whole train pool, gold and self excluded
+q, c = P.load_split(ROOT, 'train'); docs = K.prepare_docs(K.load_sentences(ROOT, 'train'), TOK); rng = random.Random(SEED); pool = sorted(c); RAND = []; t0 = time.time()
+for k, gold, neg in DATA['train']:
+    bad = set(gold) | {k}; r = rng.sample([x for x in pool if x not in bad], len(neg)); RAND.append((k, gold, r))
+    for x in r:
+        if (k, x) not in DATA['seqs']: DATA['seqs'][k, x] = K.pair_ids(docs, k, x, Q_BUDGET, C_BUDGET)
+del docs; print('random negatives', sum(len(t[2]) for t in RAND), f'{(time.time() - t0) / 60:.1f} min')"""
+c_run5 = """# 5 · Train and score dev. A run with results.json on Drive is skipped
+AMP = torch.bfloat16
+for run in RUNS:
+    rid, kind, method, pool, ckpt, o = run; d = RUN_DIR/rid
+    if (d/'results.json').is_file(): print('skip', rid); continue
+    print('=' * 20, rid, method, kind, pool)
+    C = dict(BASE, run_id=rid, kind=kind, method=method, pool=pool, **{k: v for k, v in o.items() if k not in ('randomize', 'negatives')})
+    torch.manual_seed(SEED); model = K.build(COURSE_ROOT/ckpt, kind, method, pool, Q_BUDGET + C_BUDGET + 2, adapter_kw=ADAPTER)
+    if o.get('randomize'): K.randomize(model)
+    res = K.train_run(model, dict(DATA, train=RAND) if o.get('negatives') == 'random' else DATA, d, C, DEVICE)
+    best = K.load_best(model, d); model.to(DEVICE)
+    dev = K.score_pairs(model, DATA['dev_pairs'], DATA['seqs'], DEVICE, AMP, BASE['eval_batch']); K.save_scores(d/'dev_scores.json', dev)
+    (d/'results.json').write_text(json.dumps(dict(res, lam=best['lam'], table=best['table']), indent=1, default=float)); print(rid, 'done', res['history'])
+    del model; torch.cuda.empty_cache()"""
+nb = new_notebook(cells=[md('# Phase 7 · one-factor controls\nSix runs for the report: loss, negatives, pooling and Phase 1 transfer. Dev only. Outputs go to `runs/phase7_pcr/p7x-*/` on Drive; finished runs are skipped; the last cell disconnects the runtime.'),
+                         code(c_settings5), code(c_setup), code(c_data), code(c_rand), code(c_run5), code(c_end.replace('# 5 ·', '# 6 ·'))])
+nb.metadata['accelerator'] = 'GPU'; nb.metadata['colab'] = {'gpuType': 'A100'}
+nbformat.write(nb, 'notebooks/phase7_controls.ipynb'); print('wrote notebooks/phase7_controls.ipynb')
