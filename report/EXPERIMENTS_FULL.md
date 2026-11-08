@@ -8,15 +8,15 @@ Phase 1 to 3 Codabench scores were added on Nov 8 from the submission names.
 
 | Phase | Task | Metric | Best test | Leaderboard entry | Rank (read Nov 8) |
 |---|---|---|---|---|---|
-| 1 | Pretraining + Task 1 generation | BERTScore F1 | 0.8298 (first models, greedy + no repeated token 4-gram) | 965440 | below the 50 rows shown |
-| 2 | Legal NER | strict macro-F1 | 0.5443 (GQA + MHA BIO ensemble) | 978750 | below the 50 rows shown |
-| 3 | Rhetorical roles | macro-F1 | 0.4642 | 994180 | below the 50 rows shown |
-| 4 | Judgment prediction | macro-F1 | 0.5992 | 1009488 (ensemble of runs 1 to 4, tuned threshold) | below the 50 rows shown |
-| 5 | Statute identification | macro-F1 | 0.3965 on the board; 0.4180 scored but marked Failed | 1016808 | 41 of 130 rows |
-| 6 | Summarization | BERTScore F1 | 0.8450 (ROUGE-1 0.4591, ROUGE-L 0.2459) | 1030690 | 42 of 122 rows (34 of 50 on Nov 3) |
-| 7 | Prior case retrieval | Micro-F1@7 | 0.4938 (P 0.5039, R 0.4841) | 1040042 | 6 of 132 rows (Phase 7 closes Nov 8 23:59) |
+| 1 | Pretraining + Task 1 generation | BERTScore F1 | 0.8298 (first models, greedy + no repeated token 4-gram) | 965440 | 84 of 142 |
+| 2 | Legal NER | strict macro-F1 | 0.5443 (GQA + MHA BIO ensemble) | 978750 | 52 of 132 |
+| 3 | Rhetorical roles | macro-F1 | 0.4642 | 994180 | 89 of 131 |
+| 4 | Judgment prediction | macro-F1 | 0.5992 | 1009488 (ensemble of runs 1 to 4, tuned threshold) | 122 of 130 |
+| 5 | Statute identification | macro-F1 | 0.3965 on the board; 0.4180 scored but marked Failed | 1016808 | 41 of 129 |
+| 6 | Summarization | BERTScore F1 | 0.8450 (ROUGE-1 0.4591, ROUGE-L 0.2459) | 1030690 | 42 of 124 |
+| 7 | Prior case retrieval | Micro-F1@7 | 0.4938 (P 0.5039, R 0.4841) | 1040042 | 8 of 121 (Nov 8 21:10 IST; closes 23:59) |
 
-"Rows" counts every row in the results table, so it overstates the number of teams.
+Ranks read Nov 8 21:10 IST with the leaderboard set to show all rows (one row per participant).
 
 ## 1. Models
 
@@ -95,7 +95,7 @@ The model barely beats copying the prompt's last 128 words. Encoder fill-mask to
 | GQA LoRMA, epoch 3 | 0.0155 (probably a broken export) |
 | GQA epoch 6 + MHA epoch 1, 50/50 ensemble | **0.5443** |
 
-Learning rate, batch and dropout are not recorded here.
+Settings (`phase2_legal_ner_bio_bilstm_crf.ipynb`, `bio_crf.py`): backbone LR 1e-5, head 1e-3, 100 warm-up updates then cosine, AdamW, clip 1.0; one 512-token window (stride 384) per update; up to 20 epochs with patience 4; BiLSTM hidden 256; dropout 0.2; 15% of training documents held out.
 
 ## 3. Phase 3: Rhetorical role prediction (Oct 16)
 
@@ -205,7 +205,7 @@ Seed noise (0.003 to 0.007) is as large as the gaps, so the three architectures 
 
 Threshold shrinkage: thr_k = λ_k t_k + (1 − λ_k) g with λ_k = n_k / (n_k + m), so m = 0 is per-label and m = ∞ is global; chosen by five random 2-fold cross-fit splits.
 
-Earlier Oct 28 submissions: 0.3843 (1016616/1016620), 0.3765 (1016739), 0.3965 (1016808, on the board). TODO: which ensemble each of these was.
+Earlier Oct 28 submissions: 0.3843 (1016616/1016620), 0.3765 (1016739), 0.3965 (1016808, on the board). The 0.3965 file (~/Downloads/"submission (2).zip") matches no saved output; most likely the first tuned ensemble (TF-IDF weight 0.5, m = 30, cross-fit 0.3978), later overwritten by the 0.4180 run in ens-002.
 
 **Error analysis.** Rare statutes are the weak spot: mean F1 by train-frequency quartile 0.23 / 0.33 / 0.36 / 0.50. Label co-occurrence stacking was tried (`stack_cooccurrence_cv`).
 

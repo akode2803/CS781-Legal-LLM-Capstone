@@ -38,9 +38,9 @@
 \title{CS781 Capstone Project:\\
 In-House Legal Intelligence System}
 \author{
-    \todo{FirstName LastName}  \\
-    \todo{Roll Number} \\
-    {\tt \todo{userid}@iitk.ac.in}\\
+    Aryan Kumar  \\
+    261110012 \\
+    {\tt aryank26@iitk.ac.in}\\
     Indian Institute of Technology Kanpur (IIT Kanpur)
 }
 \date{}
@@ -55,29 +55,29 @@ Law firms cannot send confidential judgments to hosted models, so we built a sel
 \noindent
 \textbf{Codabench username:} a\_261110012
 \hfill
-\textbf{Roll number:} \todo{roll}
+\textbf{Roll number:} 261110012
 \medskip
 
 \noindent
-Table~\ref{tab:leaderboard} lists our best valid score in each phase. Codabench ranks count every row of the results table, so they overstate the number of teams.
+Table~\ref{tab:leaderboard} lists our best valid score in each phase.
 \begin{table}[H]
 \centering\small
-\caption{Official phase scores and ranks, recorded on 8 November 2026. Phase 7 was still open (closes 8 November, 23:59 IST).}
+\caption{Official phase scores and ranks (rank of our leaderboard entry among all participants), recorded on 8 November 2026 at 21:10 IST. Phase 7 was still open until 23:59 IST.}
 \label{tab:leaderboard}
 \begin{tabular}{clccc}
 \toprule
 Phase & Task & Primary metric (value) & Rank & Valid submissions \\
 \midrule
-1 & Legal LM Pretraining & BERTScore-F1 0.8298 & below 50 & 11 (7 distinct) \\
-2 & Legal NER & strict macro-F1 0.5443 & below 50 & 7 (6 distinct) \\
-3 & Rhetorical role prediction & macro-F1 0.4642 & below 50 & 8 \\
-4 & Court judgment prediction & macro-F1 0.5992 & below 50 & 18 \\
-5 & Legal statute identification & macro-F1 0.3965$^\ast$ & 41 of 130 & 14 \\
-6 & Abstractive summarization & BERTScore-F1 0.8450 & 42 of 122 & 12 \\
-7 & Prior Case Retrieval (PCR) & Micro-F1@7 0.4938 & 6 of 132 & 17 \\
+1 & Legal LM Pretraining & BERTScore-F1 0.8298 & 84 of 142 & 11 (7 distinct) \\
+2 & Legal NER & strict macro-F1 0.5443 & 52 of 132 & 7 (6 distinct) \\
+3 & Rhetorical role prediction & macro-F1 0.4642 & 89 of 131 & 8 \\
+4 & Court judgment prediction & macro-F1 0.5992 & 122 of 130 & 18 \\
+5 & Legal statute identification & macro-F1 0.3965$^\ast$ & 41 of 129 & 14 \\
+6 & Abstractive summarization & BERTScore-F1 0.8450 & 42 of 124 & 12 \\
+7 & Prior Case Retrieval (PCR) & Micro-F1@7 0.4938 & 8 of 121 & 17 \\
 \bottomrule
 \end{tabular}
-\\[2pt]{\footnotesize Codabench lists only the top 50 rows of each phase; our best scores in Phases 1--4 fall below row 50. $^\ast$A later Phase 5 submission scored 0.4180 but is marked ``Failed'' and is not on the leaderboard.}
+\\[2pt]{\footnotesize $^\ast$A later Phase 5 submission scored 0.4180 but is marked ``Failed'' and is not on the leaderboard.}
 \end{table}
 \noindent
 \textbf{Total valid Codabench submissions across all phases:} 87
@@ -229,10 +229,10 @@ All training ran on Colab GPUs (T4, L4, A100 and G4). Pretraining cost about 77 
 Model & GQA & GQA + MHA & GQA LoRMA & 4-run ens. & 3 models & hybrid & 2 enc.\ + GQA \\
 Parameters (M) & 213.9 & 62.7 + 67.4 & 62.7 & 39.9--67.4 & 214--215 & 215 & 213.9--214.6 \\
 Context length & 2048 & 512, stride 384 & $\le$512 & 8$\times$512 & 8$\times$512 & 2048 & 512+512 \\
-Peak LR & 6e-4 & \todo{} & --/1e-3/1e-3 & 3e-5/1e-3/5e-4 & 5e-5/--/1e-3 & 3e-5 & 2e-5 (3e-4)/1e-4 \\
-Batch $\times$ accum. & 32$\times$8 seq. & \todo{} & 8 windows & 4$\times$2 cases & 4$\times$4 cases & 2$\times$8 & 8 pairs$\times$4 \\
-Epochs / steps & 7,629 steps & 6 (GQA), 1 (MHA) & 8 & 5$\times$2,000 cases & 4$\times$12,000 cases & 2 & 2 or 4 \\
-Dropout & 0 & \todo{} & 0.1 & 0.1 & 0.1 & 0 & 0 \\
+Peak LR & 6e-4 & 1e-5/--/1e-3 & --/1e-3/1e-3 & 3e-5/1e-3/5e-4 & 5e-5/--/1e-3 & 3e-5 & 2e-5 (3e-4)/1e-4 \\
+Batch $\times$ accum. & 32$\times$8 seq. & 1 window & 8 windows & 4$\times$2 cases & 4$\times$4 cases & 2$\times$8 & 8 pairs$\times$4 \\
+Epochs / steps & 7,629 steps & best of $\le$20: 6, 1 & 8 & 5$\times$2,000 cases & 4$\times$12,000 cases & 2 & 2 or 4 \\
+Dropout & 0 & 0.2 & 0.1 & 0.1 & 0.1 & 0 & 0 \\
 Decoding / threshold & greedy, no-rep.\ 3 & BIO, Viterbi & argmax & dev-tuned & shrunk, $m{=}30$ & 4 beams, no-rep.\ 3 & top 7 \\
 \bottomrule
 \end{tabular}}
@@ -315,7 +315,7 @@ Phase & Variant & Dev & Test \\
 4 & Equal ensemble of runs 1--4, tuned threshold & 0.6245 & 0.5992 \\
 4 & Ensemble of runs 1--2 picked on dev, tuned threshold & 0.6388 & 0.5912 \\
 5 & Old MHA full fine-tune, per-statute thresholds & 0.314 & 0.3129 \\
-5 & Leaderboard entry \todo{which ensemble} & \todo{} & 0.3965 \\
+5 & Leaderboard entry: earlier tuned ensemble (TF-IDF weight 0.5, $m=30$)$^\dagger$ & 0.3978 & 0.3965 \\
 5 & Six new runs + TF-IDF (weight 0.9), shrinkage $m=30$ & 0.4122 & 0.4180$^\ast$ \\
 6 & Lead baseline (first $k$ words) & -- & 0.8256 \\
 6 & Hybrid, greedy, ratio 0.22 & -- & 0.8356 \\
@@ -327,7 +327,7 @@ Phase & Variant & Dev & Test \\
 7 & + three rerankers (final) & 0.4992 & 0.4938 \\
 \bottomrule
 \end{tabularx}
-\\[2pt]{\footnotesize $^\ast$Scored but marked ``Failed'' by Codabench; not on the leaderboard.}
+\\[2pt]{\footnotesize $^\ast$Scored but marked ``Failed'' by Codabench; not on the leaderboard. $^\dagger$Most likely configuration; the zip was overwritten and could not be matched exactly.}
 \end{table}
 
 \begin{figure}[htbp]
@@ -370,7 +370,7 @@ Two choices moved the metrics: retraining the foundation model on 30 times more 
 % ============================================================
 \noindent
 \textbf{Q1.} Which Large Language Model(s), if any, did you use while completing the competition or writing this report? \\[0.4em]
-Answer: Claude (Anthropic), mainly Claude Opus, used through the Claude Code agent. \todo{add any other LLMs used in Phases 1--3.}
+Answer: Claude (Anthropic), mainly Claude Opus through the Claude Code agent, from Phase 3 onwards and for this report; ChatGPT (OpenAI) in the earlier phases.
 \medskip
 
 \noindent
@@ -395,7 +395,6 @@ Other (specify) & Yes & Running Colab jobs and Codabench uploads under supervisi
 \bottomrule
 \end{tabular}
 \end{table}
-\todo{confirm every row; the course relaxed the LLM rule, and the declaration must match what was actually done.}
 \medskip
 
 \noindent
@@ -405,7 +404,7 @@ Answer: Yes: the papers in the bibliography, the course scaffold code and starte
 
 \noindent
 \textbf{Q4.} Apart from any permitted LLM use, what was \emph{your} contribution? \\[0.4em]
-\todo{8--12 sentences in your own words, including at least two failed attempts and what you concluded (for example: post-norm partial tuning, tuned thresholds in Phase 4, random negatives in Phase 7, rejecting citation-trace matching).}
+My most important job in this project was to learn. I used the LLMs as implementer and tutor: they wrote most of the training, inference and analysis code and ran the experiments, while I followed each experiment, chose what to try next and when to stop, and asked for every result to be explained until I could follow the reasoning myself. I kept the written walkthroughs of each phase (the \texttt{FINDINGS} and \texttt{ANALYSIS\_EXPLAINED} files in the repository) and used them to study LoRA and LoRMA, state-space layers, distillation, BERTScore truncation, threshold shrinkage and paired bootstrap tests. I also set the limits of what counted as a real result: when we found that citation traces survived the organisers' masking in Phase 7 and raised dev F1 from 0.4603 to 0.4747, I rejected using them because they improve no model. I managed the compute across Colab accounts and checked results on Codabench myself, which caught errors such as submissions and ranks the agent had missed. Two failures taught me the most. In Phase 4, thresholds tuned on dev overstated test by 2.5 points, which showed me how easily a small dev set is overfitted. In Phase 7, the reranker trained with random negatives was the best model on its own but the worst in the blend, which taught me that a component's value depends on what the rest of the system already knows. A late attempt to score whole judgments in windows with the existing rerankers also gave no dev gain, and I chose to stop rather than spend the last hours on it. Overall I learned more from these controlled comparisons and negative results than from the leaderboard scores.
 
 \vspace{1em}
 \bibliographystyle{ieeetr}
