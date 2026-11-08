@@ -5,6 +5,15 @@ import numpy as np
 from scipy import sparse
 from sklearn.feature_extraction.text import CountVectorizer
 
+
+def course_dir():
+    """MyDrive/legal-llm-course as synced by Google Drive for Desktop (first account found); set COURSE_DRIVE to override."""
+    import glob, os
+    if os.environ.get('COURSE_DRIVE'): return os.environ['COURSE_DRIVE']
+    hits = sorted(glob.glob(os.path.expanduser('~/Library/CloudStorage/GoogleDrive-*/My Drive/legal-llm-course')))
+    if not hits: raise FileNotFoundError('set COURSE_DRIVE to the legal-llm-course folder')
+    return hits[0]
+
 K = 7
 SPLITS = {'train': ('Train/train.json', 'Train/train_candidates.json'), 'dev': ('Dev/dev.json', 'Dev/dev_candidates.json'), 'test': ('Test/test.json', 'Test/test_candidates.json')}
 

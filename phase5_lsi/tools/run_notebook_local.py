@@ -4,7 +4,8 @@ Reads the real Drive folder; ensemble outputs are redirected to ens-local-* fold
 import sys, json, types, tempfile
 from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
-SRC = Path.home()/'Library/CloudStorage/GoogleDrive-ACCOUNT/My Drive/legal-llm-course'
+import glob, os
+SRC = Path(os.environ.get('COURSE_DRIVE') or sorted(glob.glob(str(Path.home()/'Library/CloudStorage/GoogleDrive-*/My Drive/legal-llm-course')))[0])   # Drive for Desktop copy; COURSE_DRIVE overrides
 DRIVE = Path.home()/'Documents/cs781-local-cache/legal-llm-course'      # local mirror of just the files the CPU notebooks read
 NEEDED = ['rr_lib.py', 'cjpe_lib.py', 'lsi_lib.py', 'hybrid.py', 'encoder.py', 'phase2_lner_multimethod_bundle.zip', 'Phase_5_LSI/Train/train.json', 'Phase_5_LSI/Train/dev.json', 'Phase_5_LSI/Test/test.json']
 NEEDED += [f'runs/phase5_lsi/NEW-{m}/full/new-{n}-full-00{i}/{f}' for m, n in (('GQA', 'gqa'), ('ENC', 'enc'), ('HYB', 'hyb')) for i in (1, 2)

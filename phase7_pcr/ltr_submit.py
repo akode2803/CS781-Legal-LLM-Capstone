@@ -1,7 +1,7 @@
 """Writes test zips: z(learned ranker) + 0.2 z(neural). usage: python ltr_submit.py <pickle from ltr_probe.py>"""
 import json, os, pickle, sys
 import numpy as np, pcr_lib as P
-d=pickle.load(open(sys.argv[1],'rb')); R=os.path.expanduser('~/Library/CloudStorage/GoogleDrive-ACCOUNT/My Drive/legal-llm-course/runs/phase7_pcr')
+d=pickle.load(open(sys.argv[1],'rb')); R=P.course_dir()+'/runs/phase7_pcr'
 z=lambda v:(v-v.mean())/(v.std()+1e-9)
 def neural(G,I,qs,run,split):
     sc={tuple(k.split('|')):v for k,v in json.load(open(f'{R}/{run}/{split}_scores.json')).items()}; out=np.full(len(G),np.nan)

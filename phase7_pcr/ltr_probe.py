@@ -1,7 +1,7 @@
 """Learning to rank on content features only: overlap scores at several n-gram sizes, document lengths, date gap. Fit on train, scored on dev."""
 import os, numpy as np, pcr_lib as P
 from sklearn.ensemble import HistGradientBoostingClassifier as GB
-R=os.path.expanduser('~/Library/CloudStorage/GoogleDrive-ACCOUNT/My Drive/legal-llm-course/Phase_7_PCR')
+R=P.course_dir()+'/Phase_7_PCR'
 CFG=[(3,.6),(4,.6),(5,.4),(6,.6),(8,.5)]; TOP=100
 def feats(split):
     q,c=P.load_split(R,split); qi,ci=list(q),list(c); pos={k:j for j,k in enumerate(ci)}

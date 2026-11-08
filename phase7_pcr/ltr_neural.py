@@ -3,7 +3,7 @@ usage: python ltr_neural.py <features pickle> <run> [<run> ...]"""
 import json, os, pickle, sys
 import numpy as np, pcr_lib as P
 from sklearn.ensemble import HistGradientBoostingClassifier as GB
-RUNS=os.path.expanduser('~/Library/CloudStorage/GoogleDrive-ACCOUNT/My Drive/legal-llm-course/runs/phase7_pcr')
+RUNS=P.course_dir()+'/runs/phase7_pcr'
 load=lambda p:{tuple(k.split('|')):v for k,v in json.load(open(p)).items()}
 z=lambda v:(v-v.mean())/(v.std()+1e-9)
 def col(G,I,sc):
