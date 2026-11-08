@@ -1,0 +1,17 @@
+Codabench My Submissions, read Nov 8 2026 ~15:00 IST (account a_261110012, competition 18186). Leaderboard entries: P4 1009488, P5 1016808, P6 1030690, P7 1040042. Phases 1-3 tabs show no submissions on this account.
+Phase 4 (macro-F1)
+1010349 run7_mha-prenorm_lorma__thr0.5 0.5854 | 1010342 run10_gqa-prenorm_full__thr0.5 0.5838 | 1010341 run8_mla-prenorm_lorma__thr0.5 0.5761 | 1010337 run7__tuned 0.5741 | 1010335 run10__tuned 0.5824 | 1010333 run9_gqa-prenorm_lora__thr0.5 0.5648
+1009512 run4_gqa-prenorm_kd-student__thr0.5 0.5846 | 1009508 run3_mla-prenorm_lora__thr0.5 0.5665 | 1009503 run2_gqa-prenorm_lorma__thr0.5 0.5854 | 1009499 run1_mha-prenorm_full__thr0.5 0.5805
+1009497 ens_runs1-4_equal-avg__thr0.5 0.5912 | 1009494 ens_runs1-2_dev-selected__thr0.5 0.5805 | 1009489 ens_runs1-2_dev-selected__tuned 0.5912 | 1009488 ens_runs1-4_equal-avg__tuned 0.5992 (LEADERBOARD)
+1009483 run5_mha-postnorm_partial__tuned 0.4877 | 1009478 run3__tuned 0.5703 | 1009473 run1__tuned 0.5774 | 1009458 run4__tuned 0.5717 | 1009455 run2__tuned Failed 0.5862
+Phase 5 (macro-F1)
+1016845 submission_3 Failed 0.4180 (Oct 28 23:46) | 1016808 submission_2 0.3965 (LEADERBOARD) | 1016801 submission_2 Failed | 1016739 submission 0.3765 | 1016620/1016616 submission_1 0.3843
+1010420 run5_mha-postnorm_partial__global 0.0846 | 1010419 run5__perlabel 0.1019 | 1010416 run3_mla-prenorm_lora__global 0.2800 | 1010415 run3__perlabel 0.2883 | 1010414 run1_mha-prenorm_full__global 0.3008 | 1010413 run1__perlabel 0.3129
+1010412 run4_gqa-prenorm_kd-student__global 0.2616 | 1010411 run4__perlabel 0.2818 | 1010409 run2_gqa-prenorm_lorma__perlabel 0.2774 | 1010408 run2__global 0.2667
+Phase 6 (BERTScore F1)
+1030690 p6-hyb-db1536-L0.18-nr3-b4 0.8450 (LEADERBOARD) | 1030426 p6-hyb-full-L0.18-200-700-nr3-b6 0.8409 | 1028551 ...-b4 0.8409 | 1028345 p6-hyb-full-L0.3-300-900-nr6 0.8319 | 1028343 L0.22-200-700-nr6 0.8329
+1026569 p6-lead-baseline 0.8256 | 1026542 p6-hyb-full-001 0.8356 | 1026541 p6-gqa-full-001 0.8350 | 1026540 p6-gqa-lora-001 0.8303 | 1026538 p6-gqa-lorma-001 0.8330 | 1026537 p6-enc-full-001 0.8345 | 1026536 p6-gqa-kd-001 0.8299
+Phase 7 (Micro-F1@7)
+1040271 p7-ctx-eight 0.4932 | 1040042 p7-ctx-three 0.4938 (LEADERBOARD) | 1040041 p7-ctx-enc4 0.4908 | 1039875 p7-ctx-lorma 0.4914 | 1039874 p7-ctx-enc 0.4926 | 1039873 p7-ctx-ranker 0.4891
+1038845 p7-final-ranker 0.4784 | 1038844 p7-final-ranker-oldlorma 0.4849 | 1038843 p7-final-enc-lorma 0.4855 | 1038842 p7-final-lorma 0.4843 | 1038841 p7-final-enc 0.4867
+1038614 p7-ltr-gqa-full 0.4838 | 1038613 p7-ltr-lexical 0.4790 | 1038612 p7-ltr-gqa-kd 0.4849 | 1038611 p7-ltr-gqa-lorma 0.4867 | 1038608 p7-ltr-enc-full 0.4849 | 1038437 p7-shingle4-b06-hdrdate 0.4554
