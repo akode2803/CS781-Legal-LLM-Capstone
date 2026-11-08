@@ -30,3 +30,5 @@ phase2/ ... phase7/       one folder per task: library, notebooks, offline analy
 
 Each phase's notebooks write `submission.zip` with `prediction.json` at its root, the Codabench format. Local `tools/` scripts are CPU checks (synthetic smoke tests, notebook dry runs) and offline analysis.
 `phase7/citation_residue.py` is a leak analysis only and was never used for a submission. `phase7/vark_*.py` produced variable-length lists, which the rules do not allow; that upload failed and nothing from it is on the leaderboard.
+
+Public repository (full history, README for every phase and submission): https://github.com/akode2803/CS781-Legal-LLM-Capstone
