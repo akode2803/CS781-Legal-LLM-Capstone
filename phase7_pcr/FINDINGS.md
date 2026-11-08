@@ -180,3 +180,18 @@ Report text is in `report/phase7_sections.tex`, with `report/ANALYSIS_EXPLAINED.
 Six dev-only runs (`notebooks/phase7_controls.ipynb`, `report_controls.py`, `report_controls_blend.py`). Neural-only F1 against enc-full .3391: pairwise .3324, random negatives .4002, last-token .3079, frozen .2379, random start .1946; GQA mean .3357 against .3168. Blended with the ranker at w .2, hits: baseline 447, pairwise 447, random negatives 442, last 444, frozen 447, random start 444, GQA mean 444 (GQA last 442).
 
 Main result: random negatives win alone and lose in the blend, with correlation to the ranker .555 against .245. Added to the final three they gave 448 hits against 449, so no test scoring or new submission. Full table in `report/EVIDENCE.md`.
+
+## Variable-length lists (Nov 8, 19:30 IST)
+
+Micro-F1 counts every submitted prediction, so a prediction whose hit probability is below about F/2 lowers it. `vark_eval.py` keeps a top-7 prediction of the final blend only when the train-fit ranker's probability is >= tau (first prediction always kept). Dev, final blend (449 hits, F1 .4992):
+
+| Ranker p | Top-7 slots | Hit rate |
+|---|---|---|
+| < .05 | 245 | .061 |
+| .05-.1 | 76 | .263 |
+| .1-.2 | 84 | .524 |
+| >= .5 | 247 | .964 |
+
+tau .08: F1 .5597 (P .7888, R .4337, 422 hits) in-sample. Honest estimate: tau picked on half the dev queries, scored on the other half, 20 random splits: gain +.0601 (sd .0189), positive in 40 of 40; picked tau .04-.12.
+
+This only helps if the official scorer divides by the predictions actually submitted (as `micro_prf` does). `vark_submit.py` writes `submissions/p7-vark-t008.zip`: the 0.4938 entry (rebuilt exactly, 237 of 237 queries) with low-probability predictions removed, 1188 of 1659 kept. Not yet submitted.
