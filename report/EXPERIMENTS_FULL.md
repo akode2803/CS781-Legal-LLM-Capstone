@@ -2,16 +2,16 @@
 
 This is the uncompressed record for the final report, built on Nov 8, 2026. It is the source for the 10-page report, not the report itself. Each number says where it comes from: **test** = Codabench score, **dev** = our held-out split, **CV** = cross-fit on dev or train. The raw Codabench history is in `codabench_history.txt` next to this file.
 
-**Gaps you need to fill (marked TODO):** Phase 1 and Phase 2 results and ranks. That work predates the sessions I have records of, and Codabench shows no Phase 1 to 3 submissions on account a_261110012. Phase 3 test scores below come from what you reported on Oct 16. Final leaderboard ranks for Phases 1 to 4 also need checking, because I could not find a_261110012 in those leaderboards.
+Phase 1 to 3 Codabench scores were added on Nov 8 from the submission names.
 
 ## 0. Competition results at a glance
 
 | Phase | Task | Metric | Best test | Leaderboard entry | Rank (read Nov 8) |
 |---|---|---|---|---|---|
-| 1 | Pretraining + Task 1 generation | ROUGE (Task 1) | TODO | TODO | TODO |
-| 2 | Legal NER | TODO | TODO | TODO | TODO |
-| 3 | Rhetorical roles | macro-F1 | 0.4642 (best of the runs you reported) | TODO | TODO |
-| 4 | Judgment prediction | macro-F1 | 0.5992 | 1009488 (ensemble of runs 1 to 4, tuned threshold) | TODO (not found) |
+| 1 | Pretraining + Task 1 generation | BERTScore F1 | 0.8298 (first models, greedy + no repeated token 4-gram) | 965440 | below the 50 rows shown |
+| 2 | Legal NER | strict macro-F1 | 0.5443 (GQA + MHA BIO ensemble) | 978750 | below the 50 rows shown |
+| 3 | Rhetorical roles | macro-F1 | 0.4642 | 994180 | below the 50 rows shown |
+| 4 | Judgment prediction | macro-F1 | 0.5992 | 1009488 (ensemble of runs 1 to 4, tuned threshold) | below the 50 rows shown |
 | 5 | Statute identification | macro-F1 | 0.3965 on the board; 0.4180 scored but marked Failed | 1016808 | 41 of 130 rows |
 | 6 | Summarization | BERTScore F1 | 0.8450 (ROUGE-1 0.4591, ROUGE-L 0.2459) | 1030690 | 42 of 122 rows (34 of 50 on Nov 3) |
 | 7 | Prior case retrieval | Micro-F1@7 | 0.4938 (P 0.5039, R 0.4841) | 1040042 | 6 of 132 rows (Phase 7 closes Nov 8 23:59) |
@@ -24,7 +24,7 @@ This is the uncompressed record for the final report, built on Nov 8, 2026. It i
 
 Four ~63 to 67M-parameter causal decoders from the course scaffold (`legal_scaffold`): MHA pre-norm (67.4M), GQA pre-norm (62.7M), MLA pre-norm (67.0M), MHA post-norm (67.4M). All use RoPE, SwiGLU, RMSNorm and the frozen course BPE tokenizer (vocab 32,768, sha 906194848c16…). Training: WikiText stage, then legal text in 100M → 200M → 300M token stages with balanced 25% sampling per source, batch 2 × 1,024 for 60,762 steps, about 125M legal tokens in all (about 2.7% of the corpus). Codabench zips: `legal-llm-course/Codabench submissions - 4 architectures - legal 100M - 2026-10-06/`.
 
-TODO: Phase 1 validation losses, Task 1 scores and rank for these four models, and what the MHA post-norm instability looked like in Phase 1 (you said it repeated itself under greedy decoding).
+Task 1 test BERTScore (Oct 6): greedy GQA 0.7991, MHA pre 0.7980, MLA 0.7950, MHA post 0.7369; nucleus p 0.9 T 0.8 0.8211; greedy + no repeated token 4-gram 0.8228, then 0.8298 (best). Phase 1 validation losses of these models are not recorded here.
 
 ### 1.2 Clean-slate pretraining (Oct 27 to 28)
 
@@ -43,7 +43,7 @@ TODO: Phase 1 validation losses, Task 1 scores and rank for these four models, a
 | Hymba-style hybrid | 16 layers, parallel GQA attention (8 heads) + Mamba-2 SSD heads (8), FFN 2688 | 215M | causal LM | 113k tok/s | ~87 to 90 CU, ~10 h | 1.189 |
 
 - Throughput benchmark (`pretrain/gpu_benchmark.py`, M tokens per CU): L4 47.6, A100 40 GB **59.5**, A100 80 GB 50.1, G4 53.1. An MLA decoder ran at 56k tok/s (177 CU estimated), so it was dropped.
-- **Hybrid vs GQA, same data order** (val loss at step): 250: 2.675 vs 2.569; 500: 2.042 vs 1.943; 750: 1.758 vs 1.694; 1000: 1.668 vs 1.597; 1250: 1.602 vs 1.539. The hybrid reached GQA's step-1250 loss at about step 1000, about 20% fewer tokens. Final: 1.236 vs 1.189.
+- **GQA vs hybrid, same data order** (val loss at step; corrected Nov 8 from the logs, the earlier version had the labels swapped): 250: 2.675 vs 2.569; 500: 2.042 vs 1.943; 750: 1.758 vs 1.694; 1000: 1.668 vs 1.597; 1250: 1.602 vs 1.539. Logs: `report/logs/`. The hybrid reached GQA's step-1250 loss at about step 1000, about 20% fewer tokens. Final: 1.236 vs 1.189.
 - Our hybrid omits Hymba's meta tokens, sliding-window attention and cross-layer KV sharing, so it is "Hymba-style". Its SSD scan is plain PyTorch, checked against the recurrence. It has no KV cache, so generation recomputes the prefix.
 - The encoder uses the decoder's code with non-causal attention (`pretrain/encoder.py`), and padding is hidden by an embedding hook.
 
@@ -78,15 +78,28 @@ ROUGE proxy (60 official prompts: first 384 words as prompt, the next 128 as ref
 | repetition penalty 1.15 | 0.374 | 0.096 | 0.203 | 0.046 |
 | copy the previous 128 words | 0.382 | 0.103 | 0.198 | |
 
-The model barely beats copying the prompt's last 128 words. Encoder fill-mask top-1 accuracy at 30% masking: about 0.74 to 0.80. TODO: whether the final 1000-prompt run with no-repeat 3 was submitted, and its score.
+The model barely beats copying the prompt's last 128 words. Encoder fill-mask top-1 accuracy at 30% masking: about 0.74 to 0.80. The new GQA model's Task 1 continuations were never submitted (no Phase 1 submissions after Oct 6).
 
-## 2. Phase 2: Legal NER
+## 2. Phase 2: Legal NER (Oct 11)
 
-TODO, all of it. What Drive shows: BIO tagging with a BiLSTM-CRF head on GQA pre-norm and MHA pre-norm (`runs/phase2_lner/bio_bilstm_crf/`), a GQA run continued for 5 more epochs, a GQA + MHA BIO ensemble (best epoch 6), a 6-layer distilled student (`bio_distill_6layer`, teacher emissions saved), a GQA span-based variant (`gqa_span_v1` + continuation), and a multi-method notebook with MHA pre-norm full fine-tune and GQA pre-norm LoRMA+ (3 epochs, streaming export). Needed: dev and test F1 per run, the leaderboard entry and rank, and the main lessons.
+**Data** (computed Nov 8 from the HF files). Train 70 judgments in two folds of 35; test 35 (fold 3). Median 4,488 words. 8,393 entities, 120 per document: DATE 18.8%, STAT 15.0%, PREC 14.1%, COURT 12.1%, AUTH 12.0%, CASENO 9.1%, APP 4.8%, RESP 4.5%, JUDGE 2.9%, A.COUNSEL 2.3%, WIT 2.2%, R.COUNSEL 2.2%. Span median 2 words, p95 9, max 35. No overlapping spans; 137 adjacent pairs (only whitespace between). 26 of 3,418 surface strings carry more than one label (e.g. "union of india"). Gold offsets: Unicode code points, end exclusive; 0 text mismatches.
+
+**Model.** Word-level BIO tagging (25 tags): 512-token windows, stride 384; word = backbone state of its last BPE piece; BiLSTM; CRF with illegal transitions masked; Viterbi. Offsets come from the tokenizer's per-piece character spans. A span classifier (`legal_ner.py`, spans up to 32 tokens) was built, not submitted.
+
+| Submission | Test strict macro-F1 |
+|---|---|
+| MHA pre-norm BIO, best epoch 1 | 0.4647 |
+| GQA pre-norm BIO, best epoch 6 | 0.5388 |
+| GQA, latest epoch 15 | 0.5417 |
+| 6-layer distilled student | 0.5054 |
+| GQA LoRMA, epoch 3 | 0.0155 (probably a broken export) |
+| GQA epoch 6 + MHA epoch 1, 50/50 ensemble | **0.5443** |
+
+Learning rate, batch and dropout are not recorded here.
 
 ## 3. Phase 3: Rhetorical role prediction (Oct 16)
 
-**Task.** Label every sentence of a judgment with one of 13 roles (CL and IT domains). Dev is 10 documents; dev CL has ArgumentPetitioner at 24.6% against 9.2% in train, and no Dissent or PrecedentNotReliedUpon.
+**Task.** Label every sentence of a judgment with one of 13 roles (CL and IT domains). Train 80 documents (16,845 sentences), dev 10 (2,142), test 10. Dev is 10 documents; dev CL has ArgumentPetitioner at 24.6% against 9.2% in train, and no Dissent or PrecedentNotReliedUpon.
 
 **Model.** Old Phase 1 backbones encode each sentence (capped at 63 tokens) with ±3 neighbouring sentences of context; a BiGRU runs over a window of 12 core sentences; sqrt class weights. Variants added sentence-position features (`pos`).
 
@@ -97,12 +110,12 @@ TODO, all of it. What Drive shows: BIO tagging with a BiLSTM-CRF head on GQA pre
 | 1 | MHA pre-norm, full | 100% | 0.4622 | 0.4508 |
 | 2 | GQA + LoRMA, window | 1.09% | 0.4478 | 0.4543 or 0.4642 (mapping to confirm) |
 | 4 | MHA pre-norm + IA3 | 0.89% | 0.4153 | 0.4543 or 0.4642 (mapping to confirm) |
-| 7 | GQA + LoRMA + KD (teacher = run 1) | 1.09% | **0.4942** | TODO |
-| 8 | MLA + LoRA + position | 1.11% | 0.4511 | TODO |
-| | MLA full + position | 100% | 0.4602 | TODO |
+| 7 | GQA + LoRMA + KD (teacher = run 1) | 1.09% | **0.4942** | one of 0.4294 / 0.4342 / 0.4386 |
+| 8 | MLA + LoRA + position | 1.11% | 0.4511 | one of 0.4294 / 0.4342 / 0.4386 |
+| | MLA full + position | 100% | 0.4602 | one of 0.4294 / 0.4342 / 0.4386 |
 | 5 | KD run (phase3_5) | | peaked 0.42 at epoch 2, then dev loss rose from 2.05 to 4.05 while train F1 hit 0.99 | TODO |
 
-Seven submissions were made. The ensemble was ready but missed the 23:59 deadline.
+Eight submissions scored (submissions 5 to 7 are the three later runs, order not recorded). The ensemble was ready but missed the 23:59 deadline.
 
 **Offline analysis (dev macro-F1).**
 - Baselines: always `Fact` 0.031; position + domain 0.172; TF-IDF sentence 0.312; + position + domain 0.335; **+ neighbours ±1 + position (logistic regression) 0.396**; ±2 neighbours 0.386. So the language models add about 5 to 9 points.
@@ -111,7 +124,7 @@ Seven submissions were made. The ensemble was ready but missed the 23:59 deadlin
 - A count-based transition prior (Viterbi) hurt: 0.396 → 0.31 to 0.35.
 - Document-level sequence models on cheap features: per-sentence MLP 0.319; BiLSTM over the whole document 0.357; + CRF 0.347; + label-shift loss 0.347; + both 0.341.
 - Overfitting: MLA LoRA train loss 1.76 → 0.07 while dev F1 peaked at epoch 5. The full fine-tune's dev F1 rose to 0.4622 by epoch 7 while train loss fell to 0.015.
-- Test tracked dev closely (within about 1 point); spread across architectures and methods about 1.3 points.
+- Dev did not rank runs reliably: MHA IA3 dev 0.4153 vs its test (0.4543 or 0.4642), and the later runs (dev up to 0.4942) scored 0.4294 to 0.4386 on test.
 
 ## 4. Phase 4: Court judgment prediction (Oct 21 to 26)
 
