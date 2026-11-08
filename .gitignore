@@ -12,3 +12,6 @@ __pycache__/
 
 # regenerable caches
 */cache/
+
+# built submission zip
+dist/

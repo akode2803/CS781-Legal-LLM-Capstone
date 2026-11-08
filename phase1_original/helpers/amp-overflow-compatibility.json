@@ -1,0 +1,23 @@
+{
+  "patch_version": "amp-overflow-skip-v1",
+  "helper_sha256": "4a27c287f73da1929588f21db606ac1c17fe7326edeecf80b7888968d92ef15e",
+  "old_source_version": {
+    "version": "full-wikitext-native-precision-v1",
+    "manifest_sha256": "f61f229317ef1bad27d074c445f2df3a3ca8d8e86ffafe18d43185e1ff468a74"
+  },
+  "old_training_source_hashes": {
+    "long_training.py": "dca7f27a4c0a4f54ccb6136a622a00a14457e96702071e59172785ec6cdb88d4",
+    "comparison_training.py": "d85c591031c1e871253a427bfa41c7b851b1ed237019c1a29e913d09b5167d4d",
+    "torch_training.py": "ba7939df18d342c5f4a03934818868ed689bcb1c53ec6624728a82bec88e2cf6"
+  },
+  "old_module_hashes": {
+    "long_training.py": "42bdb219dca5e4510d5e6c37d9bfb546161f26e47409cb53fa9299da3a2cc996",
+    "comparison_training.py": "1c8b1f003c481baac47967c171dcb12bb34e23c55ba2088b5e19828e6874210c",
+    "torch_training.py": "78e3be21fccb6f6b5811df9d6fbcdc49f2964131f6a57a760def8f66d4985707"
+  },
+  "new_module_hashes": {
+    "long_training.py": "754ece77bd1de0119eee5dcc7894d0bf3c51387941d84b37cf16ea7b1a5f14ba",
+    "comparison_training.py": "39970e60da02aa62fc81e10e3cd87a5c91cfc6b9f65b41d358294a611935a561",
+    "torch_training.py": "3d371f316384a39d7ab6b41eba3c43dfa1be40797d130b9ba427eab1667459a0"
+  }
+}

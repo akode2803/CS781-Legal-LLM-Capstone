@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "version": "course-run-v1+amp-overflow-skip-v1+known-title-exclusion-v1+skip-empty-text-v1+tokenize-only-shards-v1+cumulative-token-milestones-v1",
+  "files": {
+    "__init__.py": "2bf5073219f56afcef91fe772e78e0b40668d2ea8a765817230f106b0b12b7de",
+    "amp_overflow_fix.py": "4a27c287f73da1929588f21db606ac1c17fe7326edeecf80b7888968d92ef15e",
+    "attention_preflight.py": "a5d171c829150a23123bdaa2edbf88cdd556379e39dde6ede9680bdaa488fa61",
+    "core.py": "d4567fdbc9bec2b80b36797c7d17853e3ee07b7d72fb649709891917adfa98d4",
+    "data_readiness.py": "0d0aa219a1c8af2095c0b9ece415021546ae77fba5f2579fbfce268f38ff2690",
+    "full_wikitext.py": "52ff2abc10c9b999f65dccab7f285f4503486e5c8bfe339a695b209fb3f25b51",
+    "kernel_dispatch.py": "f822e3dd384e450fc0b3b2a0435659d7d6e627520b94c56657ea892f619dee7d",
+    "known_wikitext_overlap_repair.py": "4abfec81a271ad7903134e11f3e970fa00b84ce609909b05eeaffdb46a20d5a4",
+    "legal_data.py": "a33e20cb11ec6646960d65dcabea080bfebb638ce99b4d07e8308b241f2b4038",
+    "legal_mix.py": "75d942cf5fbb7713a4948605ad86c62b7e8fb52ac33c1a4122784846162889da",
+    "legal_prediction.py": "3eceb20d809354c0f7de23b0b35e07b6752a3bdd20f65e300e05d3f5823a6bfc",
+    "legal_tokenize_only.py": "03e0a8ec1246f9320b4a9cf20dee5055a23b79039e56d4b12f243f377558be12",
+    "legal_training.py": "b94e07015a82e5c7ad356cbf8666f64411bfae3f9f37ecff9d2830cb91233043",
+    "long_training.py": "754ece77bd1de0119eee5dcc7894d0bf3c51387941d84b37cf16ea7b1a5f14ba",
+    "mla_checks.py": "94792afd4688d20138ac738a614fd28d9f513190e3e44f313af9999a8d3f3b39",
+    "models.py": "39e9e32ab063e94b326bcafe24f614494d4bf02ce3b7a0b48d21837a34b07485",
+    "recovery_policy.py": "0176e3bc95c3ebeb52da5609e32e63b997392302ab990efcdb0762de444f7c1c",
+    "snapshots.py": "f5f8b561e6b954d64e198de3b9a2a652452a17220f9dc8f7b83427b8befb06e1",
+    "source_version.py": "e3f1a236ab07067f9c9a948518cbf0555944c827985e7615e6e80f3dbbfd48a8",
+    "tokenizer_tools.py": "852aa1328053eea839d11237a9c4efa702802579d7ca849b8d048d8d025640e5",
+    "wikitext.py": "ee3f98da7c3ebe20b99efc91633d9dffaaf3fab0b7b40c83fa8b743d84b557bb",
+    "window_file.py": "77af94c062c174950dc15bdf744ae778d837c4f54682995daf9b58dc0cd0e661"
+  },
+  "empty_text_correction": {
+    "version": "skip-empty-text-v1",
+    "parent_source_manifest_sha256": "175238f6f232c9a642c34cf3756e51a69709da2b11a1858f9555da33210ab7ae",
+    "original_files": {
+      "core.py": "c2f1cf7f75a5c492e70581f9dcbfb057474c333d2acf0033bf7f1fd068a96f37",
+      "legal_data.py": "19989a39d831739890b784ba0f67c58c09c8aec3f302212e3a6b397611743ac9"
+    },
+    "component_sha256": "5d60d370b2446dcf80fa5b0da7554d737324d2021a22287a3f547f280b05235d",
+    "scope": "skip only empty text strings with source/index/reason audit; raw data/model/training unchanged"
+  }
+}
