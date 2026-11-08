@@ -210,7 +210,7 @@ The system has three stages \cite{nogueira2019passage}. A hashed word 4-gram ove
 \begin{equation}
 s(q,c) = z_q\big(\mathrm{logit}\,r(q,c)\big) + 0.2\cdot\tfrac{1}{3}\textstyle\sum_{m=1}^{3} z_q\big(n_m(q,c)\big),
 \end{equation}
-where $z_q$ standardises within a query, $r$ is the ranker and $n_m$ are three encoder rerankers (one full fine-tune on the plain excerpts; one full and one LoRMA on query excerpts filled first from citing sentences). Four ideas failed: the neural score as a ranker feature, retraining on train and dev, four-epoch training (train top-1 accuracy 0.95, dev neural F1 near 0.32), and averaging eight rerankers (test 0.4932).
+where $z_q$ standardises within a query, $r$ is the ranker and $n_m$ are three rerankers: a fully fine-tuned encoder on the plain excerpts, and a fully fine-tuned encoder and a GQA LoRMA model on query excerpts filled first from citing sentences. Four ideas failed: the neural score as a ranker feature, retraining on train and dev, four-epoch training (train top-1 accuracy 0.95, dev neural F1 near 0.32), and averaging eight rerankers (test 0.4932).
 % ============================================================
 \section{Experiments and Implementation Details}
 % ============================================================
@@ -226,8 +226,8 @@ All training ran on Colab GPUs (T4, L4, A100 and G4). Pretraining cost about 77 
 \toprule
  & P1 & P2 & P3 & P4 & P5 & P6 & P7 \\
 \midrule
-Model & GQA & GQA + MHA & GQA LoRMA & 4-run ens. & 3 models & hybrid & 3 encoders \\
-Parameters (M) & 213.9 & 62.7 + 67.4 & 62.7 & 39.9--67.4 & 214--215 & 215 & 213.9 \\
+Model & GQA & GQA + MHA & GQA LoRMA & 4-run ens. & 3 models & hybrid & 2 enc.\ + GQA \\
+Parameters (M) & 213.9 & 62.7 + 67.4 & 62.7 & 39.9--67.4 & 214--215 & 215 & 213.9--214.6 \\
 Context length & 2048 & 512, stride 384 & $\le$512 & 8$\times$512 & 8$\times$512 & 2048 & 512+512 \\
 Peak LR & 6e-4 & \todo{} & --/1e-3/1e-3 & 3e-5/1e-3/5e-4 & 5e-5/--/1e-3 & 3e-5 & 2e-5 (3e-4)/1e-4 \\
 Batch $\times$ accum. & 32$\times$8 seq. & \todo{} & 8 windows & 4$\times$2 cases & 4$\times$4 cases & 2$\times$8 & 8 pairs$\times$4 \\

@@ -197,3 +197,17 @@ tau .08: F1 .5597 (P .7888, R .4337, 422 hits) in-sample. Honest estimate: tau p
 This only helps if the official scorer divides by the predictions actually submitted (as `micro_prf` does). `vark_submit.py` writes `submissions/p7-vark-t008.zip`: the 0.4938 entry (rebuilt exactly, 237 of 237 queries) with low-probability predictions removed, 1188 of 1659 kept.
 
 **Not allowed.** Submitted as 1042447 (Nov 8, 19:40 IST): status Failed. The rules on the Get Started page require exactly seven unique candidate IDs per test query, so precision always divides by 7 per query and this gain does not exist under the official metric. `pcr_lib.write_submission` already asserted seven; `vark_submit.py` bypassed it. Keep the dev numbers only as a note on how the metric could be gamed if lists were variable.
+
+## Window scoring without retraining (Nov 8, 20:30-21:00 IST)
+
+`chunk_scores.py` scored each top-50 candidate as up to 12 evenly spaced windows (96-token opening + 416 contiguous tokens), with the final rerankers unchanged; 87,299 dev and 162,704 test window pairs (about 7 per candidate). Run on a Colab CLI A100; checkpoints pulled with rclone (read-only remote). Only p7-enc-full finished before stopping. Dev, `chunk_eval`-style check:
+
+| Neural score (p7-enc-full) | Alone F1 (hits) | Ranker + 0.2 z (hits) |
+|---|---|---|
+| excerpt (current) | .3391 (305) | .4969 (447) |
+| window max | .2001 (180) | .4958 (446) |
+| window top-2 mean | .1901 (171) | .4947 (445) |
+| window mean | .2057 (185) | .4947 (445) |
+| excerpt + window max, averaged | | .4958 (446) |
+
+Windows are much weaker alone and add nothing to the blend. The rerankers were trained on excerpts chosen by shared rare n-grams; evenly spaced windows are mostly unrelated text the models never learned to discount. Making this work needs max-over-windows training (about 1h45m on an A100), not tried: the deadline was too close and the neural term is worth only a few hits. No submission. 1040042 (0.4938) stays.
