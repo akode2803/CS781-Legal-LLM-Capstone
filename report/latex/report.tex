@@ -215,7 +215,7 @@ where $z_q$ standardises within a query, $r$ is the ranker and $n_m$ are three r
 \section{Experiments and Implementation Details}
 % ============================================================
 \subsection{Compute and training protocol}
-All training ran on Colab GPUs (T4, L4, A100 and G4). Pretraining cost about 77 compute units for GQA and 87--90 for the hybrid; a Phase 7 reranker run costs about 8. Task runs use AdamW with warm-up and decay, bf16, separate learning rates for backbone, adapters and head, and a wall-clock cap with resumable checkpoints. Phases 3 to 5 keep the epoch with the best dev macro-F1, Phase 6 the best validation loss, and Phase 7 the best dev score of the reranker alone. Table~\ref{tab:hparams} gives the settings of each phase's final model.
+All training ran on Colab. Pretraining cost about 77 compute units for GQA and 87--90 for the hybrid; a Phase 7 reranker run costs about 8. Task runs use AdamW with warm-up and decay, bf16, separate learning rates for backbone, adapters and head, and a wall-clock cap with resumable checkpoints. Phases 3 to 5 keep the epoch with the best dev macro-F1, Phase 6 the best validation loss, and Phase 7 the best dev score of the reranker alone. Table~\ref{tab:hparams} gives the settings of each phase's final model.
 
 \begin{table}[H]
 \centering\footnotesize
