@@ -194,4 +194,6 @@ Micro-F1 counts every submitted prediction, so a prediction whose hit probabilit
 
 tau .08: F1 .5597 (P .7888, R .4337, 422 hits) in-sample. Honest estimate: tau picked on half the dev queries, scored on the other half, 20 random splits: gain +.0601 (sd .0189), positive in 40 of 40; picked tau .04-.12.
 
-This only helps if the official scorer divides by the predictions actually submitted (as `micro_prf` does). `vark_submit.py` writes `submissions/p7-vark-t008.zip`: the 0.4938 entry (rebuilt exactly, 237 of 237 queries) with low-probability predictions removed, 1188 of 1659 kept. Not yet submitted.
+This only helps if the official scorer divides by the predictions actually submitted (as `micro_prf` does). `vark_submit.py` writes `submissions/p7-vark-t008.zip`: the 0.4938 entry (rebuilt exactly, 237 of 237 queries) with low-probability predictions removed, 1188 of 1659 kept.
+
+**Not allowed.** Submitted as 1042447 (Nov 8, 19:40 IST): status Failed. The rules on the Get Started page require exactly seven unique candidate IDs per test query, so precision always divides by 7 per query and this gain does not exist under the official metric. `pcr_lib.write_submission` already asserted seven; `vark_submit.py` bypassed it. Keep the dev numbers only as a note on how the metric could be gamed if lists were variable.

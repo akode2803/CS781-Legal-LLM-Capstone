@@ -1,4 +1,5 @@
-"""Test zip for the final blend (ranker + 0.2 mean z of three rerankers) with variable-length lists:
+"""NOT A VALID SUBMISSION: the rules require exactly seven candidates per query (1042447 Failed, Nov 8). Kept for the record.
+Test zip for the final blend (ranker + 0.2 mean z of three rerankers) with variable-length lists:
 a top-7 prediction is kept only if the ranker's hit probability is >= tau (the first one is always kept). See vark_eval.py.
 usage: python vark_submit.py <ctx features pickle> <tau> <out zip>"""
 import json, pickle, sys, zipfile
