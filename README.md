@@ -55,67 +55,119 @@ Phases 4 to 7 keep their submission zips in `submissions/`.
   `rerank_lib.py`), `phase2_lner_multimethod_bundle.zip` (= `common/` plus `phase2_lner/legal_ner.py`), the Phase 1 checkpoints under `runs/` and `pretrain/`,
   and per-run outputs under `runs/<phase>/`. Local scripts that read that folder find it through Google Drive for Desktop, or through `COURSE_DRIVE`.
 
+## Running a phase notebook (Phases 3 to 7)
+
+1. Generate the notebooks if you changed a default: `python phase4_cjpe/make_notebooks.py` (likewise `phase5_lsi`, `phase6_summ`, `pretrain`;
+   Phase 7 uses `phase7_pcr/make_notebook.py`). Phase 3 notebooks are edited directly.
+2. Copy the phase library to Drive: `rr_lib.py`, `cjpe_lib.py`, `lsi_lib.py` and `summ_lib.py` go in `MyDrive/legal-llm-course/`; the Phase 7 files
+   (`pcr_lib.py`, `rerank_lib.py`, `rr_lib.py`, `pretrain/encoder.py`, `pretrain/hybrid.py`) go in `MyDrive/legal-llm-course/phase7_pcr/`.
+   `phase2_lner_multimethod_bundle.zip` and the Phase 1 checkpoints must already be there (see Setup).
+3. Open the notebook in Colab, add the `HF_TOKEN` secret, pick a GPU, and run all cells. Cell 1 holds every setting; `ACTION = 'Train'` trains,
+   evaluates on dev and writes the submission; `ACTION = 'Predict'` reloads `best.pt` and only rewrites the submission.
+4. The run folder `MyDrive/legal-llm-course/runs/<phase>/<arch>/<method>/<run id>/` receives the log, `best.pt`, dev metrics and `submission.zip`
+   (`prediction.json` at the root, the Codabench format). In Phases 3 to 6 training saves its state every epoch (Phase 6: every 20 minutes), so a
+   disconnected runtime resumes where it stopped when the notebook is run again.
+
+Shared fine-tuning methods (`common/training_methods.py`): `full` (all weights), `partial` (last blocks only), `lora` and `rslora` (rank-r updates on
+query and value), `lorma` (multiplicative low-rank update), `ia3` (learned scaling of keys, values and FFN), `kd` (a student made of every other
+block of the backbone, trained on the labels and on a finished `full` teacher's soft outputs, temperature 2).
+
 ## Phase 1: pretraining and Task 1
 
-**First models** (`phase1_original/`, Oct 4 to 6). Four causal decoders of about 63 to 67M parameters from the course scaffold: MHA pre-norm,
-GQA pre-norm, MLA pre-norm and MHA post-norm, all with RoPE, SwiGLU and RMSNorm and the frozen course tokenizer. Training: one WikiText pass, then legal
-text in 100M, 200M and 300M token stages with each of the four sources (acts, Supreme Court, tribunals, High Courts) sampled at 25%. Batch 2 x 1,024 tokens,
-60,762 steps, about 125M legal tokens (about 2.7% of the corpus). Run path: `legal_course_end_to_end_v1.ipynb` with `helpers/` (see `RUN_INSTRUCTIONS.md`).
-These models are the backbones of Phases 2 to 5.
+**Architecture.** First models (`phase1_original/`, Oct 4 to 6): four causal decoders of about 63 to 67M parameters from the course scaffold,
+12 layers, d_model 512, 8 heads, FFN 2,048, context 2,048, tied embeddings, RoPE, SwiGLU, RMSNorm, the frozen course BPE tokenizer (32,768 tokens):
+MHA pre-norm, GQA pre-norm (2 KV heads), MLA pre-norm and MHA post-norm. Clean-slate models (`pretrain/`, Oct 27 to 28), about 214M each:
+a GQA decoder (16 layers, d 1,024, 16 heads / 4 KV heads, context 2,048), an MLM encoder with the same layout but bidirectional attention
+(`encoder.py`), and a Hymba-style hybrid (`hybrid.py`) whose attention heads and Mamba-2 SSD heads read the same input in parallel.
 
-**Clean-slate pretraining** (`pretrain/`, Oct 27 to 28). Phases 2 to 5 showed the first models were weak, so three ~214M models were trained from scratch
-on 4.0B tokens (about 20 tokens per parameter):
-- `prepare_corpus.py` streams the 19.2 GB corpus into uint16 token shards (drops empty, short and exact-duplicate documents; resumable).
-- `audit_overlap.py` removes 5,470 corpus documents that overlap Phase 4 and 5 dev/test texts (sampled 16-gram fingerprints).
-- `train.py`: AdamW (0.9, 0.95; weight decay 0.1 on matrices), lr 6e-4, 300 warm-up steps, cosine to 6e-5, batch 524,288 tokens, 7,629 steps, bf16,
-  `torch.compile`, deterministic data order for exact resume. Notebooks: `notebooks/pretrain_dec_gqa.ipynb`, `pretrain_enc_mlm.ipynb`, `pretrain_hybrid.ipynb`.
-- Models: GQA decoder (16 layers, d 1024, 16 heads / 4 KV heads, context 2,048; final val loss 1.236), MLM encoder (same layout, bidirectional, 30% masking,
-  `encoder.py`), and a Hymba-style hybrid (`hybrid.py`: attention heads and Mamba-2 SSD heads read the same input in parallel; val loss 1.189).
-  An MLA decoder was dropped after `gpu_benchmark.py` showed it would cost about twice as much compute.
-- Tests: `tests/test_prepare_corpus.py`, `test_hybrid.py` (SSD scan against the recurrence), `test_downstream_loading.py`.
-- Task 1 generation: `generate_task1.py` (greedy, optional no-repeat n-gram, repetition penalty, nucleus; ROUGE proxy on held-out prompt tails).
+**Method.** Next-token prediction. First models: one WikiText pass, then legal text in 100M, 200M and 300M token stages, each of the four sources
+(acts, Supreme Court, tribunals, High Courts) sampled at 25%. Phases 2 to 5 showed these models were weak, so the clean-slate models were trained on
+4.0B tokens (about 20 tokens per parameter) of the deduplicated corpus, with 30% masking for the encoder. Task 1 continues a 512-word excerpt by
+128 words.
 
-| Submission | BERTScore F1 |
-|---|---|
-| GQA pre-norm, greedy | 0.7991 |
-| MHA pre-norm, greedy | 0.7980 |
-| MLA pre-norm, greedy | 0.7950 |
-| MHA post-norm, greedy | 0.7369 |
-| nucleus (p 0.9, T 0.8) | 0.8211 |
-| greedy, no repeated token 4-gram | 0.8228 |
-| **greedy, no repeated token 4-gram (second export)** | **0.8298** |
+**Implementation.**
+- `phase1_original/legal_course_end_to_end_v1.ipynb` with `helpers/` (scaffold, data preparation, staged training, export); `RUN_INSTRUCTIONS.md` gives every step.
+- `pretrain/prepare_corpus.py` streams the 19.2 GB corpus into uint16 token shards (drops empty, short and exact-duplicate documents; resumable).
+- `pretrain/audit_overlap.py` removes 5,470 corpus documents that overlap Phase 4 and 5 dev/test texts (sampled 16-gram fingerprints).
+- `pretrain/train.py`: one resumable pass with a deterministic data order; `gpu_benchmark.py` measured cost per architecture (MLA was dropped: about twice the compute).
+- `pretrain/generate_task1.py`: greedy, optional no-repeat n-gram, repetition penalty, nucleus; ROUGE proxy on held-out prompt tails.
+- Tests: `pretrain/tests/test_prepare_corpus.py`, `test_hybrid.py` (SSD scan against the recurrence), `test_downstream_loading.py`.
 
-All Phase 1 submissions used the first models (Oct 6). The cell that applied the 4-gram rule was not saved separately; `generate_task1.py --no-repeat 4`
-implements the same rule for the new models, whose continuations were analysed but not submitted.
+**Experimental setup.** First models: batch 2 x 1,024 tokens, 60,762 steps, about 125M legal tokens (about 2.7% of the corpus). Clean slate: AdamW
+(0.9, 0.95; weight decay 0.1 on matrices), lr 6e-4, 300 warm-up steps, cosine to 6e-5, batch 524,288 tokens, 7,629 steps, bf16, `torch.compile`.
+Final validation loss: GQA 1.236, hybrid 1.189.
+
+**How to run.**
+```bash
+python pretrain/prepare_corpus.py --raw /path/to/Phase_1_Pretraining/Train --out /path/to/tokens
+python pretrain/train.py --tokens /path/to/tokens --scaffold /path/to/scaffold --out /path/to/out --tokens-budget 4e9 --micro-batch 32 --compile
+python pretrain/generate_task1.py gqa /path/to/model_final.pt --out out_gqa.json
+```
+In Colab, `pretrain/notebooks/pretrain_dec_gqa.ipynb`, `pretrain_enc_mlm.ipynb` and `pretrain_hybrid.ipynb` run the same steps (they embed `train.py`).
+
+**Submissions** (all from the first models, Oct 6):
+
+| Submission | What it was | BERTScore F1 |
+|---|---|---|
+| GQA pre-norm | greedy continuation | 0.7991 |
+| MHA pre-norm | greedy | 0.7980 |
+| MLA pre-norm | greedy | 0.7950 |
+| MHA post-norm | greedy | 0.7369 |
+| nucleus | nucleus sampling, p 0.9, temperature 0.8 | 0.8211 |
+| no-repeat 4 | greedy, no repeated token 4-gram | 0.8228 |
+| **no-repeat 4, second export** | **same rule, re-exported** | **0.8298** |
+
+The cell that applied the 4-gram rule was not saved separately; `generate_task1.py --no-repeat 4` implements the same rule for the new models,
+whose continuations were analysed but not submitted.
 
 ## Phase 2: legal named-entity recognition (`phase2_lner/`)
 
-Word-level BIO tagging with 25 tags over 12 entity types. The backbone reads 512-token windows (stride 384); each word takes the state of its last
-BPE piece; a BiLSTM (hidden 256) and a CRF with illegal transitions masked decode the tags (Viterbi). Character offsets come from the tokenizer's
-per-piece spans. Settings: AdamW, backbone lr 1e-5, head 1e-3, 100 warm-up updates then cosine, clip 1.0, dropout 0.2, up to 20 epochs with patience 4,
-15% of training documents held out. `legal_ner.py` also has a span classifier (spans up to 32 tokens), built but not submitted.
+**Architecture.** A first-model backbone (GQA or MHA pre-norm) reads the text; each word takes the hidden state of its last BPE piece; a BiLSTM
+(hidden 256) and a CRF over 25 BIO tags (12 entity types) with illegal transitions masked.
 
-Files: `bio_crf.py` (model and training), `phase2_legal_ner_bio_bilstm_crf.ipynb` (GQA), `phase2_legal_ner_mha_bio_bilstm_crf.ipynb` (MHA),
-`phase2_legal_ner_gqa_mha_bio_ensemble.ipynb` + `bio_ensemble.py` (fixed-weight combination of the two taggers' CRF scores),
-`bio_best_test_export_v4.py`, `phase2_legal_ner_multimethod.ipynb` (method comparison).
+**Method.** Word-level BIO tagging, decoded with Viterbi; character offsets come from the tokenizer's per-piece spans. The best submission adds the
+CRF scores of the GQA and MHA taggers with fixed 50/50 weights. `legal_ner.py` also has a span classifier (spans up to 32 tokens), built but not submitted.
 
-| Submission | Strict macro-F1 |
-|---|---|
-| MHA pre-norm, best epoch 1 | 0.4647 |
-| GQA pre-norm, best epoch 6 | 0.5388 |
-| GQA, latest epoch 15 | 0.5417 |
-| 6-layer distilled GQA student | 0.5054 |
-| GQA LoRMA, epoch 3 | 0.0155 (probably a broken export) |
-| **GQA epoch 6 + MHA epoch 1, 50/50 ensemble** | **0.5443** |
+**Implementation.** `bio_crf.py` (alignment, model, training, recovery), `bio_ensemble.py` (score ensemble), `bio_best_test_export_v4.py`
+(test export), `phase2_legal_ner_gqa_mha_bio_ensemble_recovery.py`.
+
+**Experimental setup.** 512-token windows with stride 384; AdamW, backbone lr 1e-5, head lr 1e-3, 100 warm-up updates then cosine, gradient clip 1.0,
+dropout 0.2, up to 20 epochs with patience 4, 15% of training documents held out for model selection. Metric: strict macro-F1.
+
+**How to run.** In Colab, run `phase2_legal_ner_bio_bilstm_crf.ipynb` (GQA) and `phase2_legal_ner_mha_bio_bilstm_crf.ipynb` (MHA), then
+`phase2_legal_ner_gqa_mha_bio_ensemble.ipynb` to combine them and write the submission. `phase2_legal_ner_multimethod.ipynb` compares methods.
+
+**Submissions:**
+
+| Submission | What it was | Strict macro-F1 |
+|---|---|---|
+| MHA | MHA pre-norm tagger, best epoch 1 | 0.4647 |
+| GQA | GQA pre-norm tagger, best epoch 6 | 0.5388 |
+| GQA latest | GQA, epoch 15 | 0.5417 |
+| student | 6-layer distilled GQA student | 0.5054 |
+| LoRMA | GQA with LoRMA, epoch 3 | 0.0155 (probably a broken export) |
+| **ensemble** | **GQA epoch 6 + MHA epoch 1, 50/50 CRF scores** | **0.5443** |
 
 ## Phase 3: rhetorical role labelling (`phase3_rr/`)
 
-Each sentence gets one of 13 roles. The backbone encodes every sentence (up to 63 tokens) with three neighbouring sentences on each side; a BiGRU runs over
-windows of 12 sentences; square-root class weights. Library `rr_lib.py` (+ `doclib.py`); notebooks `phase3_1` to `phase3_9` (one run each: MHA full,
-GQA LoRMA, MLA LoRA, MHA IA3, distillation, a sentence-only ablation, distillation onto LoRMA, position features), `phase3_ensemble`, `phase3_twostage`.
-`analysis/` holds CPU baselines (TF-IDF with neighbours and position: dev 0.396) and data checks.
+**Architecture.** A first-model backbone encodes each sentence (up to 63 tokens) together with three neighbouring sentences on each side; a BiGRU runs
+over windows of 12 sentence vectors; a linear layer predicts one of 13 roles.
 
-| Submission | Run | Macro-F1 |
+**Method.** Sentence classification in context, square-root class weights. Runs vary the backbone and the fine-tuning method; one ablation drops the
+neighbours (sentence only), two add sentence-position features.
+
+**Implementation.** `rr_lib.py` (data, windows, model, training, export) with `doclib.py`; notebooks `phase3_1` to `phase3_9` (one run each),
+`phase3_ensemble`, `phase3_twostage`. `analysis/` holds CPU baselines (TF-IDF with neighbours and position: dev 0.396) and data checks.
+
+**Experimental setup.** 8 epochs, seed 17; learning rates (backbone / adapter / head) full 5e-5 / - / 1e-3, LoRA and LoRMA - / 1e-3 / 1e-3,
+IA3 - / 3e-3 / 1e-3; LoRA rank 8, alpha 16 on query and value; distillation temperature 2, alpha 0.5. Metric: macro-F1.
+
+**How to run.** Copy `rr_lib.py` to `MyDrive/legal-llm-course/`, then run a notebook such as `notebooks/phase3_2_gqa_lorma.ipynb`.
+`phase3_5_gqa_kd_needs_run1.ipynb` needs the finished run 1 as its teacher.
+
+**Submissions:**
+
+| Submission | What it was | Macro-F1 |
 |---|---|---|
 | submission_1 | MLA + LoRA | 0.4509 |
 | submission_2 | GQA + LoRMA or MHA + IA3 | 0.4543 |
@@ -128,94 +180,154 @@ Codabench names were generic, so the mapping of submissions 2 and 3 to the GQA L
 
 ## Phase 4: court judgment prediction (`phase4_cjpe/`)
 
-Binary outcome from the full case text. Cases (about 5,500 tokens on average) are split into 512-token chunks; up to 8 are selected (`last` by default,
-chosen from a TF-IDF analysis of which third of a case predicts best), encoded, pooled by attention into one case vector, and classified with
-square-root class weights. Library `cjpe_lib.py`; notebooks from `make_notebooks.py`:
+**Architecture.** Cases average about 5,500 tokens. Each case is cut into 512-token chunks; up to 8 are selected and encoded by a first-model backbone;
+attention pooling turns the chunk vectors into one case vector; a linear layer predicts the binary outcome.
 
+**Method.** Chunk selection `last` (a TF-IDF analysis showed the last third of a case predicts best), square-root class weights. Each run also tunes a
+decision threshold on dev. The best submission averages the probabilities of runs 1 to 4 with equal weights and a dev-tuned threshold.
+
+**Implementation.** `cjpe_lib.py` (data, chunking, model, training, export); notebooks from `make_notebooks.py`:
 - `phase4_0_data_and_baseline` (CPU): lengths, label balance, TF-IDF baseline (dev 0.624, 0.654 with a tuned threshold).
-- Runs: `phase4_1_mha_pre_full` (also the distillation teacher), `phase4_2_gqa_lorma`, `phase4_3_mla_lora`, `phase4_4_gqa_kd_student` (6-layer student),
-  `phase4_5_mha_post_partial`; controls `phase4_7` to `phase4_10` vary only the architecture or only the method; `phase4_6_frozen_probe` tests frozen features.
-- Each run writes a threshold-0.5 and a dev-tuned-threshold submission plus `dev_probs.json` / `test_probs.json`; `tools/local_ensemble.py` and
-  `phase4_ensemble.ipynb` average runs. `ensemble/probs/` keeps the probabilities used for the final ensemble.
-- `tools/`: synthetic smoke test of every architecture x method, notebook dry run with Colab mocked, real-data smoke test, duplicate checks.
+- Runs `phase4_1_mha_pre_full` (also the distillation teacher), `phase4_2_gqa_lorma`, `phase4_3_mla_lora`, `phase4_4_gqa_kd_student` (6-layer student),
+  `phase4_5_mha_post_partial`; controls `phase4_7` to `phase4_10` change only the architecture or only the method; `phase4_6_frozen_probe` tests frozen features.
+- `tools/local_ensemble.py` and `phase4_ensemble.ipynb` average runs; `ensemble/probs/` keeps the probabilities of the final ensemble.
+- `tools/`: synthetic smoke test of every architecture x method, a notebook dry run with Colab mocked, a real-data smoke test, duplicate checks.
 
-| Submission | Macro-F1 (thr 0.5 / dev-tuned) |
-|---|---|
-| run 1, MHA pre-norm full | 0.5805 / 0.5774 |
-| run 2, GQA LoRMA | 0.5854 / Failed (0.5862) |
-| run 3, MLA LoRA | 0.5665 / 0.5703 |
-| run 4, GQA distilled student | 0.5846 / 0.5717 |
-| run 5, MHA post-norm partial | - / 0.4877 |
-| run 7, MHA LoRMA (control) | 0.5854 / 0.5741 |
-| run 8, MLA LoRMA (control) | 0.5761 / - |
-| run 9, GQA LoRA (control) | 0.5648 / - |
-| run 10, GQA full (control) | 0.5838 / 0.5824 |
-| runs 1 + 2, picked on dev | 0.5805 / 0.5912 |
-| **runs 1 to 4, equal average** | 0.5912 / **0.5992** |
+**Experimental setup.** 5 epochs of 2,000 random cases each, at most 60 minutes per run (T4), batch 4 cases x 2 accumulation steps, AdamW (0.9, 0.98),
+6% warm-up then cosine; learning rates (backbone / adapter / head) full 3e-5 / - / 5e-4, partial 1e-4 / - / 5e-4, adapters - / 1e-3 / 5e-4,
+IA3 - / 3e-3 / 5e-4; rank 8, alpha 16; distillation temperature 2, alpha 0.3. Metric: macro-F1.
+
+**How to run.** Copy `rr_lib.py` and `cjpe_lib.py` to Drive, run a notebook in `notebooks/`, and after runs 1 to 4:
+```bash
+python -I phase4_cjpe/tools/local_ensemble.py /path/to/data phase4_cjpe/ensemble/probs out/ runs=1,2,3,4
+```
+
+**Submissions:**
+
+| Submission | What it was | Macro-F1 (thr 0.5 / dev-tuned) |
+|---|---|---|
+| run 1 | MHA pre-norm, full | 0.5805 / 0.5774 |
+| run 2 | GQA, LoRMA | 0.5854 / Failed (0.5862) |
+| run 3 | MLA, LoRA | 0.5665 / 0.5703 |
+| run 4 | GQA distilled 6-layer student | 0.5846 / 0.5717 |
+| run 5 | MHA post-norm, partial | - / 0.4877 |
+| run 7 | MHA, LoRMA (control) | 0.5854 / 0.5741 |
+| run 8 | MLA, LoRMA (control) | 0.5761 / - |
+| run 9 | GQA, LoRA (control) | 0.5648 / - |
+| run 10 | GQA, full (control) | 0.5838 / 0.5824 |
+| runs 1 + 2 | pair picked on dev | 0.5805 / 0.5912 |
+| **runs 1 to 4** | **equal-weight average** | 0.5912 / **0.5992** |
 
 ## Phase 5: legal statute identification (`phase5_lsi/`)
 
-Multi-label prediction over 100 statutes. Same chunked encoder as Phase 4 (uniform chunk selection, attention pooling), 100 sigmoid outputs, BCE with
-square-root positive weights, at least one statute per document. Thresholds: one global, per statute, or per statute shrunk toward the global one
-(thr_k = λ t_k + (1 − λ) g, λ = n_k / (n_k + m)), always scored by cross-fitting on dev. Library `lsi_lib.py`; notebooks: `phase5_0` (data and
-TF-IDF + LinearSVC baseline), runs `phase5_1` to `phase5_5` (first models), `phase5_6` to `phase5_11` (new GQA, encoder, hybrid; two seeds each),
-`phase5_tfidf_variants`, `phase5_ensemble` (neural average blended with TF-IDF, thresholds tuned by cross-fit). `tools/run_notebook_local.py` runs the CPU notebooks locally.
+**Architecture.** The Phase 4 chunked encoder (uniform chunk selection, attention pooling) with 100 sigmoid outputs, one per statute. Later runs use
+the clean-slate GQA decoder, encoder and hybrid as backbones.
 
-| Submission | Macro-F1 (global / per-label) |
-|---|---|
-| run 1, MHA pre-norm full | 0.3008 / 0.3129 |
-| run 2, GQA LoRMA | 0.2667 / 0.2774 |
-| run 3, MLA LoRA | 0.2800 / 0.2883 |
-| run 4, GQA distilled student | 0.2616 / 0.2818 |
-| run 5, MHA post-norm partial | 0.0846 / 0.1019 |
-| ensembles (Oct 28) | 0.3843, 0.3765 |
-| **tuned ensemble, most likely TF-IDF weight 0.5, m = 30** | **0.3965** |
-| TF-IDF weight 0.9 + neural, m = 30 | 0.4180 (scored, but marked Failed by Codabench) |
+**Method.** Multi-label BCE with square-root positive weights, at least one statute per document. Thresholds: one global, one per statute, or per
+statute shrunk toward the global one (thr_k = λ t_k + (1 − λ) g, λ = n_k / (n_k + m)), always scored by cross-fitting on dev. The best submission
+averages six neural runs, blends them with a TF-IDF model, and uses the shrunk thresholds.
+
+**Implementation.** `lsi_lib.py`; notebooks `phase5_0` (data and TF-IDF baseline), runs `phase5_1` to `phase5_5` (first models), `phase5_6` to
+`phase5_11` (clean-slate GQA, encoder and hybrid, two seeds each), `phase5_tfidf_variants`, `phase5_ensemble`. `tools/run_notebook_local.py` runs the
+CPU notebooks locally.
+
+**Experimental setup.** 4 epochs of 12,000 random documents each (of about 42,000), at most 60 minutes per run, batch 4 x 4 accumulation steps,
+8 chunks of 512 tokens, rank 8, alpha 16; per-epoch evaluation on 3,000 dev documents. Metric: macro-F1.
+
+**How to run.** Copy `rr_lib.py`, `cjpe_lib.py` and `lsi_lib.py` to Drive, run the run notebooks, then `phase5_tfidf_variants` and `phase5_ensemble`
+(CPU; locally with `python phase5_lsi/tools/run_notebook_local.py`).
+
+**Submissions:**
+
+| Submission | What it was | Macro-F1 (global / per-label threshold) |
+|---|---|---|
+| run 1 | MHA pre-norm, full | 0.3008 / 0.3129 |
+| run 2 | GQA, LoRMA | 0.2667 / 0.2774 |
+| run 3 | MLA, LoRA | 0.2800 / 0.2883 |
+| run 4 | GQA distilled student | 0.2616 / 0.2818 |
+| run 5 | MHA post-norm, partial | 0.0846 / 0.1019 |
+| ensembles (Oct 28) | neural averages with TF-IDF | 0.3843, 0.3765 |
+| **tuned ensemble** | **six neural runs + TF-IDF, most likely TF-IDF weight 0.5, shrinkage m = 30** | **0.3965** |
+| TF-IDF 0.9 | TF-IDF weight 0.9 + neural, m = 30 | 0.4180 (scored, but marked Failed by Codabench) |
 
 ## Phase 6: summarization (`phase6_summ/`)
 
-The decoder writes the summary after `[document] <eos> " Summary:"`, with the loss on summary tokens only; the encoder runs as a prefix LM.
-Library `summ_lib.py` (input selection, training for full / LoRA / LoRMA / distillation, decoding with no-repeat n-grams, beam search and a length policy,
-ROUGE and BERTScore validation). Notebooks: `phase6_1` to `phase6_6` (GQA full, LoRMA, LoRA, distilled 8-block student, hybrid full, encoder full),
-`phase6_7` (position-weighted loss), `phase6_8_hybrid_doc1536` (final), `phase6_8b_db1536_test_shard` + `test_shard.py` + `merge_shards.py`
-(test decoding split across sessions), `make_lead.py` (lead baseline). Details: `FINDINGS.md`.
+**Architecture.** The clean-slate decoders write the summary after `[document] <eos> " Summary:"`; the encoder runs as a prefix LM. The final model
+is the Hymba-style hybrid (attention and Mamba-2 heads in parallel, about 214M parameters).
 
-| Submission | BERTScore F1 |
-|---|---|
-| lead baseline (first k words) | 0.8256 |
-| GQA full / LoRA / LoRMA / distilled student | 0.8350 / 0.8303 / 0.8330 / 0.8299 |
-| encoder full (prefix LM) | 0.8345 |
-| hybrid full | 0.8356 |
-| hybrid, no-repeat 6 (two length settings) | 0.8329, 0.8319 |
-| hybrid, length 0.18, no-repeat 3, 4 beams / 6 beams | 0.8409 / 0.8409 |
-| **hybrid, document budget 1,536 tokens, 4 beams** | **0.8450** |
+**Method.** Full fine-tuning with the loss on summary tokens only. The document is cut to a token budget (first 3/4 and last 1/4 of the budget).
+Decoding: beam search, no repeated token 3-gram, summary length = clip(0.18 x document words, 200, 700) words, within 0.8 to 1.2 of that.
+
+**Implementation.** `summ_lib.py` (input selection, training for full / LoRA / LoRMA / distillation, decoding with no-repeat n-grams, beam search and
+the length policy, ROUGE and BERTScore validation). Notebooks `phase6_1` to `phase6_6` (GQA full, LoRMA, LoRA, distilled 8-block student, hybrid full,
+encoder full), `phase6_7` (position-weighted loss), `phase6_8_hybrid_doc1536` (final), `phase6_8b_db1536_test_shard` + `test_shard.py` + `merge_shards.py`
+(test decoding split across sessions), `make_lead.py` (lead baseline). Every experiment is written up in `FINDINGS.md`.
+
+**Experimental setup.** 2 epochs, batch 2 x 8 accumulation steps (16 sequences), context 2,048, AdamW (0.9, 0.95), 5% warm-up then cosine, lr 3e-5
+(full) or 5e-4 (LoRA, LoRMA), rank 16, alpha 32. Final run: document budget 1,536 tokens, 4 beams. Metric: BERTScore F1 (ROUGE also tracked).
+
+**How to run.** Copy `summ_lib.py` to Drive, run `notebooks/phase6_8_hybrid_doc1536.ipynb`; to split test decoding, run
+`phase6_8b_db1536_test_shard.ipynb` once per shard, then
+```bash
+python phase6_summ/merge_shards.py <run dir> <reference submission.zip> submission.zip
+python phase6_summ/make_lead.py /path/to/Phase_6_Summ lead.zip        # lead baseline
+```
+
+**Submissions:**
+
+| Submission | What it was | BERTScore F1 |
+|---|---|---|
+| lead | first k words of the document, no model | 0.8256 |
+| GQA | full / LoRA / LoRMA / distilled student | 0.8350 / 0.8303 / 0.8330 / 0.8299 |
+| encoder | full fine-tune as a prefix LM | 0.8345 |
+| hybrid | full fine-tune | 0.8356 |
+| hybrid, no-repeat 6 | two length settings | 0.8329, 0.8319 |
+| hybrid, tuned decoding | length 0.18, no-repeat 3, 4 beams / 6 beams | 0.8409 / 0.8409 |
+| **hybrid, budget 1,536** | **document budget 1,536 tokens, 4 beams** | **0.8450** |
 
 ## Phase 7: prior case retrieval (`phase7_pcr/`)
 
-For each query judgment, return the 7 cited prior cases from a candidate pool. Pipeline:
-1. Lexical shortlist (`pcr_lib.py`): hashed word 4-gram overlap with length normalisation and a header-date filter (gold is always older). Dev 0.4603.
+**Architecture.** A three-stage ranker: a lexical shortlist, a gradient-boosted learned ranker, and cross-encoder rerankers built on the clean-slate
+models (the pair `[query excerpt] <eos> [candidate excerpt] <eos>` goes through the backbone, a linear head scores it).
+
+**Method.** For each query judgment, return exactly 7 cited prior cases from the candidate pool.
+1. Lexical shortlist (`pcr_lib.py`): hashed word 4-gram overlap with length normalisation and a header-date filter (gold cases are always older). Dev 0.4603.
 2. Learned ranker (`ltr_features.py`, `ltr_probe.py`): HistGradientBoosting on 19 overlap, length and date features over the top 100. Dev 0.4847.
 3. Citing-context features (`ltr_ctx.py`): overlap with the query sentences around each `<CITATION>` placeholder. Dev 0.4947.
-4. Cross-encoder rerankers on the new Phase 1 models (`rerank_lib.py`; notebooks `phase7_rerank`, `phase7_cite`, `phase7_cite_lorma`, `phase7_seeds`,
-   `phase7_crossfit`, `phase7_controls`, generated by `make_notebook.py`): [query excerpt] <eos> [candidate excerpt] <eos>, softmax over one gold and seven
-   lexical negatives. Full, LoRA, LoRMA, IA3, partial and distillation were compared.
+4. Rerankers (`rerank_lib.py`): softmax over one gold and seven lexical negatives; full, LoRA, LoRMA, IA3, partial and distillation compared.
 5. Final blend (`ltr_ctx_submit.py`): ranker log-odds + 0.2 x mean z-score of three rerankers. Dev 0.4992.
 
-Analysis: `report_analysis.py`, `report_controls.py`, `report_controls_blend.py`, `report_figures.py`, `report/EVIDENCE.md`, `FINDINGS.md`.
-`citation_residue.py` measures citation traces left by the organisers' masking; it is analysis only and was never used for a submission.
-`chunk_scores.py` / `chunk_eval.py` (window scoring) gave no dev gain and were not submitted.
+**Implementation.** Lexical and ranker stages run on CPU; rerankers run in notebooks generated by `make_notebook.py` (`phase7_rerank`, `phase7_cite`,
+`phase7_cite_lorma`, `phase7_seeds`, `phase7_crossfit`, `phase7_controls`). Analysis: `report_analysis.py`, `report_controls.py`,
+`report_controls_blend.py`, `report_figures.py`, `report/EVIDENCE.md`, `FINDINGS.md`. `citation_residue.py` measures citation traces left by the
+organisers' masking; it is analysis only and was never used for a submission. `chunk_scores.py` / `chunk_eval.py` (window scoring) gave no dev gain.
 
-| Submission | Micro-F1@7 |
-|---|---|
-| word 4-gram overlap | 0.4554 |
-| learned ranker, lexical features | 0.4790 |
-| ranker + reranker: encoder full / GQA LoRMA / GQA KD / GQA full | 0.4849 / 0.4867 / 0.4849 / 0.4838 |
-| ranker and rerankers retrained on train + dev (five entries) | 0.4784 to 0.4867 |
-| citing-context ranker alone | 0.4891 |
-| + encoder / + LoRMA / + 4-epoch encoder | 0.4926 / 0.4914 / 0.4908 |
-| **+ mean of three rerankers** | **0.4938** |
-| + mean of eight rerankers | 0.4932 |
-| variable-length lists (`vark_*.py`) | Failed: the rules require exactly 7 per query |
+**Experimental setup.** Rerankers: 512 query + 512 candidate tokens, 7 negatives from the lexical top 40 for training, top 50 reranked at test time,
+2 epochs, accumulation 4, AdamW (0.9, 0.95), lr 2e-5 (full) or 3e-4 (LoRA, LoRMA), head lr 1e-4, rank 16, alpha 32, at most 40 minutes per run.
+Metric: Micro-F1@7.
+
+**How to run.**
+```bash
+python phase7_pcr/ltr_features.py feats.pkl                       # ranker features for train, dev, test (reads the course Drive folder)
+python phase7_pcr/ltr_ctx.py feats.pkl ctx.pkl                    # add citing-context features
+python phase7_pcr/ltr_ctx_submit.py ctx.pkl ranker                # ranker alone
+python phase7_pcr/ltr_ctx_submit.py ctx.pkl blend=<run>,<run>,<run>:0.2   # ranker + mean z-score of rerankers
+```
+The reranker runs come from the Colab notebooks above (`RUNS` in `make_notebook.py` lists every run).
+
+**Submissions:**
+
+| Submission | What it was | Micro-F1@7 |
+|---|---|---|
+| lexical | word 4-gram overlap | 0.4554 |
+| ranker | learned ranker, lexical features | 0.4790 |
+| ranker + one reranker | encoder full / GQA LoRMA / GQA KD / GQA full | 0.4849 / 0.4867 / 0.4849 / 0.4838 |
+| train + dev | ranker and rerankers retrained on train + dev (five entries) | 0.4784 to 0.4867 |
+| context ranker | citing-context ranker alone | 0.4891 |
+| context ranker + one reranker | encoder / LoRMA / 4-epoch encoder | 0.4926 / 0.4914 / 0.4908 |
+| **context ranker + three rerankers** | **mean z-score of three rerankers** | **0.4938** |
+| context ranker + eight rerankers | mean of eight | 0.4932 |
+| variable length | `vark_*.py` lists of varying length | Failed: the rules require exactly 7 per query |
 
 ## Building the course submission
 
