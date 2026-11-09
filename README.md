@@ -340,4 +340,4 @@ at the root. It refuses to build if it finds weights, credentials, files over 5 
 
 ## LLM use
 
-Declared in full in the report's LLM usage declaration: Claude (from Phase 3 on, and for the report) and ChatGPT (earlier phases).
+Claude and ChatGPT.
